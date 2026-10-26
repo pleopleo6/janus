@@ -271,6 +271,11 @@ impl HybridSharedSecret {
         Ok(out)
     }
 
+    /// Raw bytes, for the key schedule only.
+    pub(crate) fn as_bytes(&self) -> &[u8; HYBRID_SS_LEN] {
+        &self.0
+    }
+
     #[cfg(test)]
     pub(crate) fn mlkem_part(&self) -> &[u8] {
         self.0.split_at(COMPONENT_SS_LEN).0
