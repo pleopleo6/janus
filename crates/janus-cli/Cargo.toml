@@ -1,0 +1,18 @@
+[package]
+name = "janus-cli"
+description = "TCP demo client/server for the Janus hybrid secure channel"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "janus"
+path = "src/main.rs"
+
+[dependencies]
+
+[lints]
+workspace = true
