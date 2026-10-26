@@ -252,8 +252,11 @@ including replay, reordering and truncation detection.
   no `KeyUpdate` message.
 - **Single version, no negotiation.** A future v2 would need explicit
   downgrade protection (the version byte is already in the transcript).
-- **Server confirmation of the client** is implicit: like TLS 1.3, the client
-  may send data after `ClientFinish` before knowing the server accepted it.
+- **Server confirmation of the client** is implicit in the protocol: like TLS
+  1.3, the client could send data after `ClientFinish` before knowing the
+  server accepted it. The demo CLI adds an explicit acceptance receipt (the
+  server's first record is empty) and the client waits for it, but this is an
+  application convention, not part of the handshake.
 - **No multi-session / multi-user security analysis**, no bounds on the
   number of sessions per identity.
 

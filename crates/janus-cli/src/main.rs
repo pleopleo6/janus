@@ -20,7 +20,7 @@ use anyhow::{Context, Result};
 use clap::{Args, Parser, Subcommand};
 use janus_channel::ChannelConfig;
 use janus_core::handshake::{Config, Session, TrustStore};
-use janus_core::sig::IdentityKeypair;
+use janus_core::sig::{Fingerprint, IdentityKeypair};
 use rand_core::TryRng as _;
 use tokio::net::{TcpListener, TcpStream};
 
@@ -117,19 +117,23 @@ impl Common {
 }
 
 fn report(session: &Session, info: &HandshakeInfo) {
+    report_parts(&session.peer().fingerprint(), session.session_id(), info);
+}
+
+fn report_parts(peer: &Fingerprint, session_id: &[u8], info: &HandshakeInfo) {
     eprintln!(
         "[janus] handshake ok in {:.1} ms ({} B sent, {} B received)",
         info.elapsed.as_secs_f64() * 1000.0,
         info.bytes_sent,
         info.bytes_received
     );
-    eprintln!("[janus] peer: {}", session.peer().fingerprint());
+    eprintln!("[janus] peer: {peer}");
     // Shown so users can compare it out-of-band (like Signal's safety number):
     // equal values prove there is no man in the middle, even if a pinned key
     // was set up wrongly.
     eprintln!(
         "[janus] session id: {}",
-        identity::grouped(session.session_id().get(..16).unwrap_or_default())
+        identity::grouped(session_id.get(..16).unwrap_or_default())
     );
 }
 
@@ -180,10 +184,11 @@ async fn main() -> Result<()> {
                 let job = async move {
                     let (session, d, info) = net::server_handshake(&mut stream, &config).await?;
                     report(&session, &info);
+                    let link = net::server_open(&mut stream, session, d, ch).await?;
                     if echo {
-                        net::run_echo(stream, d, session, ch).await
+                        net::run_echo(stream, link).await
                     } else {
-                        net::run_interactive(stream, d, session, ch).await
+                        net::run_interactive(stream, link).await
                     }
                 };
                 if echo {
@@ -208,9 +213,12 @@ async fn main() -> Result<()> {
                 .await
                 .with_context(|| format!("cannot connect to {addr}"))?;
             let (session, d, info) = net::client_handshake(&mut stream, &config).await?;
-            report(&session, &info);
+            // Report only once the server has confirmed it accepted us.
+            let (peer, id) = (session.peer().fingerprint(), *session.session_id());
+            let link = net::client_open(&mut stream, session, d, ch).await?;
+            report_parts(&peer, &id, &info);
             eprintln!("[janus] type messages, Ctrl-D to close");
-            report_ending(&net::run_interactive(stream, d, session, ch).await?);
+            report_ending(&net::run_interactive(stream, link).await?);
         }
     }
     Ok(())

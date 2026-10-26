@@ -19,9 +19,26 @@ so that an attacker has to break **both** to win:
 
 | Goal              | Classical | Post-quantum | Combination                                      |
 |-------------------|-----------|--------------|--------------------------------------------------|
-| Key exchange      | X25519    | ML-KEM-768   | HKDF over `ss_x25519 ‖ ss_mlkem` + transcript    |
+| Key exchange      | X25519    | ML-KEM-768   | HKDF over `ss_mlkem ‖ ss_x25519` + transcript    |
 | Authentication    | Ed25519   | ML-DSA-65    | **both** signatures must verify, else abort      |
 | Record protection | —         | —            | ChaCha20-Poly1305 (256-bit key, PQ-safe enough)  |
+
+## Handshake lab (browser)
+
+`web/` is a single-page lab that runs the real `janus-core` and
+`janus-channel` code, compiled to WebAssembly. It shows the three handshake
+messages byte by byte (post-quantum, classical and protocol fields), lets you
+flip any byte in flight and see which check rejects it, replays canned attacks
+(impostor peers, version downgrade, the ignored X25519 top bit, a forged
+ML-DSA half, …) and drives the encrypted channel through replay, reordering,
+bit flips, truncation and rekeys.
+
+```sh
+./web/build.sh                       # rebuild web/pkg (prebuilt copy committed)
+python3 -m http.server -d web 8000   # then open http://localhost:8000
+```
+
+Scenarios have direct links, e.g. `#x25519`, `#mldsa`, `#rogue-server`.
 
 ## Documentation
 
@@ -42,6 +59,7 @@ together; see the design notes for details.
 | [`janus-channel`](crates/janus-channel)      | record encryption / decryption, framing, rekey, anti-replay  |
 | [`janus-cli`](crates/janus-cli)              | TCP demo client / server (tokio)                             |
 | [`janus-bench`](crates/janus-bench)          | criterion benchmarks and message-size report                 |
+| [`janus-wasm`](crates/janus-wasm)            | WebAssembly bindings for the browser lab (`web/`)            |
 | [`fuzz`](fuzz)                               | `cargo-fuzz` targets (parsers, server, record layer)         |
 
 No cryptographic primitive is implemented here: everything comes from
@@ -70,6 +88,10 @@ $J connect 127.0.0.1:7878 --id client.id --trust "$SERVER_FP"
 hello post-quantum world
 < hello post-quantum world
 ```
+
+The client reports the session only after the server's acceptance receipt
+(an empty encrypted record under the server→client key), so a client the
+server refuses gets a clear error instead of a session that silently dies.
 
 Both sides print the same *session id*: comparing it out of band (like a
 Signal safety number) confirms there is no man in the middle. Peers are

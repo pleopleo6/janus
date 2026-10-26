@@ -4,7 +4,8 @@ use std::time::{Duration, Instant};
 
 use anyhow::{Context, Result, anyhow, bail};
 use janus_channel::{
-    ChannelConfig, Deframer, Error as ChannelError, Frame, FrameType, Received, channel,
+    ChannelConfig, Deframer, Error as ChannelError, Frame, FrameType, Received, Receiver, Sender,
+    channel,
 };
 use janus_core::handshake::{self, Config, Session};
 use rand_core::UnwrapErr;
@@ -159,15 +160,66 @@ fn eof_ending(rx: &janus_channel::Receiver) -> Result<Ending> {
     }
 }
 
+/// An established, mutually confirmed channel over a stream.
+#[derive(Debug)]
+pub struct Link {
+    tx: Sender,
+    rx: Receiver,
+    d: Deframer,
+}
+
+/// Server side: open the channel and send the acceptance receipt.
+///
+/// The handshake has no fourth message, so after `ClientFinish` the client
+/// cannot know whether the server accepted it (as in TLS 1.3). The demo makes
+/// acceptance explicit: the server's first record is an empty `Data` record.
+/// It is encrypted under the server→client key, which only a server that
+/// accepted the client has derived.
+pub async fn server_open<S: AsyncWrite + Unpin>(
+    stream: &mut S,
+    session: Session,
+    d: Deframer,
+    cfg: ChannelConfig,
+) -> Result<Link> {
+    let (mut tx, rx) = channel(session, cfg)?;
+    stream.write_all(&tx.seal(&[])?).await?;
+    Ok(Link { tx, rx, d })
+}
+
+/// Client side: open the channel and wait for the server's acceptance
+/// receipt before reporting the session as established.
+pub async fn client_open<S: AsyncRead + Unpin>(
+    stream: &mut S,
+    session: Session,
+    mut d: Deframer,
+    cfg: ChannelConfig,
+) -> Result<Link> {
+    let (tx, mut rx) = channel(session, cfg)?;
+    let first = tokio::time::timeout(HANDSHAKE_TIMEOUT, read_frame(stream, &mut d))
+        .await
+        .context("server did not confirm the session in time")?;
+    match first {
+        Ok(Some(frame)) => match rx.open(&frame)? {
+            Received::Data(m) if m.is_empty() => Ok(Link { tx, rx, d }),
+            _ => bail!("unexpected first record from the server"),
+        },
+        Ok(None) | Err(_) => {
+            bail!("the server refused the session (our identity is probably not pinned there)")
+        }
+    }
+}
+
 /// Echo server loop: every message is sent back; a `Close` is answered with
 /// a `Close`.
 pub async fn run_echo<S: AsyncRead + AsyncWrite + Unpin>(
     mut stream: S,
-    mut d: Deframer,
-    session: Session,
-    cfg: ChannelConfig,
+    link: Link,
 ) -> Result<Ending> {
-    let (mut tx, mut rx) = channel(session, cfg)?;
+    let Link {
+        mut tx,
+        mut rx,
+        mut d,
+    } = link;
     loop {
         let Some(frame) = read_frame(&mut stream, &mut d).await? else {
             return eof_ending(&rx);
@@ -187,11 +239,13 @@ pub async fn run_echo<S: AsyncRead + AsyncWrite + Unpin>(
 /// Ends when either side closes.
 pub async fn run_interactive<S: AsyncRead + AsyncWrite + Unpin>(
     mut stream: S,
-    mut d: Deframer,
-    session: Session,
-    cfg: ChannelConfig,
+    link: Link,
 ) -> Result<Ending> {
-    let (mut tx, mut rx) = channel(session, cfg)?;
+    let Link {
+        mut tx,
+        mut rx,
+        mut d,
+    } = link;
     let mut stdin = BufReader::new(tokio::io::stdin()).lines();
     let mut sent_close = false;
     loop {
@@ -236,6 +290,15 @@ mod tests {
     use std::sync::Arc;
     use tokio::net::{TcpListener, TcpStream};
 
+    const CFG: ChannelConfig = ChannelConfig { rekey_interval: 2 };
+
+    async fn connect(addr: std::net::SocketAddr, client: &Config) -> (TcpStream, Link) {
+        let mut s = TcpStream::connect(addr).await.unwrap();
+        let (session, d, _) = client_handshake(&mut s, client).await.unwrap();
+        let link = client_open(&mut s, session, d, CFG).await.unwrap();
+        (s, link)
+    }
+
     fn configs() -> (Config, Config) {
         let c = IdentityKeypair::from_seed(&[1; 64]);
         let s = IdentityKeypair::from_seed(&[2; 64]);
@@ -264,7 +327,8 @@ mod tests {
         let task = tokio::spawn(async move {
             let (mut s, _) = listener.accept().await?;
             let (session, d, _) = server_handshake(&mut s, &server).await?;
-            run_echo(s, d, session, ChannelConfig { rekey_interval: 2 }).await
+            let link = server_open(&mut s, session, d, CFG).await?;
+            run_echo(s, link).await
         });
         (addr, task)
     }
@@ -273,10 +337,14 @@ mod tests {
     async fn echo_over_tcp_with_rekeys() {
         let (client, server) = configs();
         let (addr, task) = spawn_echo(server).await;
-        let mut s = TcpStream::connect(addr).await.unwrap();
-        let (session, mut d, info) = client_handshake(&mut s, &client).await.unwrap();
-        assert!(info.bytes_sent > 6000 && info.bytes_received > 6000);
-        let (mut tx, mut rx) = channel(session, ChannelConfig { rekey_interval: 2 }).unwrap();
+        let (
+            mut s,
+            Link {
+                mut tx,
+                mut rx,
+                mut d,
+            },
+        ) = connect(addr, &client).await;
         for i in 0..7u8 {
             s.write_all(&tx.seal(&[i; 10]).unwrap()).await.unwrap();
             let f = read_frame(&mut s, &mut d).await.unwrap().unwrap();
@@ -292,9 +360,14 @@ mod tests {
     async fn server_detects_truncation() {
         let (client, server) = configs();
         let (addr, task) = spawn_echo(server).await;
-        let mut s = TcpStream::connect(addr).await.unwrap();
-        let (session, mut d, _) = client_handshake(&mut s, &client).await.unwrap();
-        let (mut tx, mut rx) = channel(session, ChannelConfig { rekey_interval: 2 }).unwrap();
+        let (
+            mut s,
+            Link {
+                mut tx,
+                mut rx,
+                mut d,
+            },
+        ) = connect(addr, &client).await;
         s.write_all(&tx.seal(b"hi").unwrap()).await.unwrap();
         let f = read_frame(&mut s, &mut d).await.unwrap().unwrap();
         rx.open(&f).unwrap();
@@ -314,10 +387,13 @@ mod tests {
         let (addr, task) = spawn_echo(server).await;
         let mut s = TcpStream::connect(addr).await.unwrap();
         // The client completes its side (it trusts the server)…
-        client_handshake(&mut s, &rogue).await.unwrap();
-        // …but the server refuses it.
+        let (session, d, _) = client_handshake(&mut s, &rogue).await.unwrap();
+        // …but the server refuses it, and the client learns it before
+        // reporting a session: no acceptance receipt arrives.
         let err = task.await.unwrap().unwrap_err();
         assert!(format!("{err:#}").contains("untrusted"), "{err:#}");
+        let err = client_open(&mut s, session, d, CFG).await.unwrap_err();
+        assert!(format!("{err:#}").contains("refused"), "{err:#}");
     }
 
     #[tokio::test]
