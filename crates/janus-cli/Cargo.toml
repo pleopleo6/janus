@@ -13,6 +13,15 @@ name = "janus"
 path = "src/main.rs"
 
 [dependencies]
+janus-core.workspace = true
+janus-channel.workspace = true
+tokio.workspace = true
+clap.workspace = true
+anyhow.workspace = true
+hex.workspace = true
+zeroize.workspace = true
+rand_core.workspace = true
+getrandom.workspace = true
 
 [lints]
 workspace = true

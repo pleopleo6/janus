@@ -1,0 +1,50 @@
+[package]
+name = "janus-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2024"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4.13"
+janus-core = { path = "../crates/janus-core" }
+janus-channel = { path = "../crates/janus-channel" }
+rand_core = "0.10.1"
+getrandom = { version = "0.4.3", features = ["sys_rng"] }
+
+[[bin]]
+name = "client_hello"
+path = "fuzz_targets/client_hello.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "server_hello"
+path = "fuzz_targets/server_hello.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "client_finish"
+path = "fuzz_targets/client_finish.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "server_accept"
+path = "fuzz_targets/server_accept.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "records"
+path = "fuzz_targets/records.rs"
+test = false
+doc = false
+bench = false

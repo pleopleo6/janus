@@ -67,3 +67,23 @@ jobs:
       - uses: EmbarkStudios/cargo-deny-action@v2
         with:
           command: check advisories bans licenses sources
+
+  # Short fuzzing smoke run on every push; long campaigns are run locally.
+  fuzz:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [client_hello, server_hello, client_finish, server_accept, records]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@nightly
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: fuzz
+      - run: cargo install --locked cargo-fuzz
+      - run: mkdir -p fuzz/corpus/${{ matrix.target }} fuzz/seeds/${{ matrix.target }}
+      - run: >
+          cargo fuzz run -O ${{ matrix.target }}
+          fuzz/corpus/${{ matrix.target }} fuzz/seeds/${{ matrix.target }}
+          -- -max_total_time=60 -max_len=8192

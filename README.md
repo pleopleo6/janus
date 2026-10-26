@@ -38,12 +38,44 @@ RustCrypto (`ml-kem`, `ml-dsa`, `hkdf`, `hmac`, `sha2`, `chacha20poly1305`)
 and dalek (`x25519-dalek`, `ed25519-dalek`). The project code is
 `#![forbid(unsafe_code)]`.
 
+## Demo
+
+```sh
+cargo build --release
+J=target/release/janus
+
+SERVER_FP=$($J keygen --out server.id)     # prints the fingerprint
+CLIENT_FP=$($J keygen --out client.id)
+
+$J serve --echo --id server.id --trust "$CLIENT_FP" &
+$J connect 127.0.0.1:7878 --id client.id --trust "$SERVER_FP"
+```
+
+```text
+[janus] handshake ok in 1.1 ms (6663 B sent, 6562 B received)
+[janus] peer: c7326eb8d58d6b6bacb0441f0b5276f9e78f8ce860e615dd2cbcb2dfa4a5d1e3…
+[janus] session id: 31b6 3e8c 1c71 b177 8fbd 2d1e dd17 942d
+[janus] type messages, Ctrl-D to close
+hello post-quantum world
+< hello post-quantum world
+```
+
+Both sides print the same *session id*: comparing it out of band (like a
+Signal safety number) confirms there is no man in the middle. Peers are
+authenticated by pinned fingerprints only (no PKI). Identity files are
+**unencrypted** on disk (mode 0600).
+
+Without `--echo`, the server chats over stdin/stdout with one client at a
+time.
+
 ## Building and testing
 
 ```sh
 cargo test --workspace --release   # release: ML-DSA is slow in debug builds
 cargo clippy --workspace --all-targets -- -D warnings
 ```
+
+Fuzzing: see [`fuzz/README.md`](fuzz/README.md).
 
 ## License
 

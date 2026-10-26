@@ -1,5 +1,6 @@
 [workspace]
 resolver = "3"
+exclude = ["fuzz"]
 members = [
     "crates/janus-core",
     "crates/janus-channel",
@@ -38,8 +39,9 @@ thiserror = "2.0.21"
 hex = "0.4.3"
 proptest = "1.12.0"
 criterion = "0.8.2"
-tokio = { version = "1.54.1", features = ["rt-multi-thread", "macros", "net", "io-util", "io-std", "sync"] }
+tokio = { version = "1.54.1", features = ["rt-multi-thread", "macros", "net", "io-util", "io-std", "sync", "time"] }
 clap = { version = "4.6.7", features = ["derive"] }
+anyhow = "1.0.104"
 
 [workspace.lints.rust]
 unsafe_code = "forbid"
