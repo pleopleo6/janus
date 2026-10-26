@@ -1,0 +1,318 @@
+# X25519 (flags ZeroSharedSecret => must be rejected as non-contributory)
+# Extracted from Wycheproof (C2SP/wycheproof, Apache-2.0), testvectors_v1/.
+
+tcId = 1
+result = valid
+private = c8a9d5a91091ad851c668b0736c1c9a02936c0d3ad62670858088047ba057475
+public = 504a36999f489cd2fdbc08baff3d88fa00569ba986cba22548ffde80f9806829
+shared = 436a2c040cf45fea9b29a0cb81b1f41458f863d0d61b453d0a982720d6d61320
+flags = Normal
+
+tcId = 2
+result = acceptable
+private = d85d8c061a50804ac488ad774ac716c3f5ba714b2712e048491379a500211958
+public = 63aa40c6e38346c5caf23a6df0a5e6c80889a08647e551b3563449befcfc9733
+shared = 279df67a7c4611db4708a0e8282b195e5ac0ed6f4b2f292c6fbd0acac30d1332
+flags = Twist
+
+tcId = 3
+result = acceptable
+private = c8b45bfd32e55325d9fd648cb302848039000b390e44d521e58aab3b29a6964b
+public = 0f83c36fded9d32fadf4efa3ae93a90bb5cfa66893bc412c43fa7287dbb99779
+shared = 4bc7e01e7d83d6cf67632bf90033487a5fc29eba5328890ea7b1026d23b9a45f
+flags = Twist
+
+tcId = 7
+result = acceptable
+private = d03edde9f3e7b799045f9ac3793d4a9277dadeadc41bec0290f81f744f73775f
+public = 0200000000000000000000000000000000000000000000000000000000000000
+shared = b87a1722cc6c1e2feecb54e97abd5a22acc27616f78f6e315fd2b73d9f221e57
+flags = Twist,SpecialPublicKey
+
+tcId = 8
+result = acceptable
+private = e09d57a914e3c29036fd9a442ba526b5cdcdf28216153e636c10677acab6bd6a
+public = 0300000000000000000000000000000000000000000000000000000000000000
+shared = a29d8dad28d590cd3017aa97a4761f851bf1d3672b042a4256a45881e2ad9035
+flags = Twist,SpecialPublicKey
+
+tcId = 32
+result = acceptable
+private = 88227494038f2bb811d47805bcdf04a2ac585ada7f2f23389bfd4658f9ddd45e
+public = 0000000000000000000000000000000000000000000000000000000000000000
+shared = 0000000000000000000000000000000000000000000000000000000000000000
+flags = SmallPublicKey,LowOrderPublic,SpecialPublicKey,ZeroSharedSecret
+
+tcId = 33
+result = acceptable
+private = 48232e8972b61c7e61930eb9450b5070eae1c670475685541f0476217e48184f
+public = 0100000000000000000000000000000000000000000000000000000000000000
+shared = 0000000000000000000000000000000000000000000000000000000000000000
+flags = SmallPublicKey,LowOrderPublic,SpecialPublicKey,ZeroSharedSecret
+
+tcId = 34
+result = valid
+private = a8386f7f16c50731d64f82e6a170b142a4e34f31fd7768fcb8902925e7d1e25a
+public = 0400000000000000000000000000000000000000000000000000000000000000
+shared = 34b7e4fa53264420d9f943d15513902342b386b172a0b0b7c8b8f2dd3d669f59
+flags = SpecialPublicKey
+
+tcId = 35
+result = valid
+private = d05abd08bf5e62538cb9a5ed105dbedd6de38d07940085072b4311c2678ed77d
+public = 0001000000000000000000000000000000000000000000000000000000000000
+shared = 3aa227a30781ed746bd4b3365e5f61461b844d09410c70570abd0d75574dfc77
+flags = SpecialPublicKey
+
+tcId = 63
+result = acceptable
+private = e0f978dfcd3a8f1a5093418de54136a584c20b7b349afdf6c0520886f95b1272
+public = e0eb7a7c3b41b8ae1656e3faf19fc46ada098deb9c32b1fd866205165f49b800
+shared = 0000000000000000000000000000000000000000000000000000000000000000
+flags = LowOrderPublic,SpecialPublicKey,ZeroSharedSecret
+
+tcId = 64
+result = acceptable
+private = 387355d995616090503aafad49da01fb3dc3eda962704eaee6b86f9e20c92579
+public = 5f9c95bca3508c24b1d0b1559c83ef5b04445cc4581c8e86d8224eddd09f1157
+shared = 0000000000000000000000000000000000000000000000000000000000000000
+flags = LowOrderPublic,SpecialPublicKey,ZeroSharedSecret
+
+tcId = 65
+result = acceptable
+private = c8fe0df92ae68a03023fc0c9adb9557d31be7feed0d3ab36c558143daf4dbb40
+public = ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f
+shared = 0000000000000000000000000000000000000000000000000000000000000000
+flags = LowOrderPublic,Twist,SpecialPublicKey,ZeroSharedSecret
+
+tcId = 66
+result = acceptable
+private = c8d74acde5934e64b9895d5ff7afbffd7f704f7dfccff7ac28fa62a1e6410347
+public = e0eb7a7c3b41b8ae1656e3faf19fc46ada098deb9c32b1fd866205165f49b880
+shared = 0000000000000000000000000000000000000000000000000000000000000000
+flags = LowOrderPublic,NonCanonicalPublic,SpecialPublicKey,ZeroSharedSecret
+
+tcId = 67
+result = acceptable
+private = b85649d5120e01e8ccaf7b2fb8d81b62e8ad6f3d5c0553fdde1906cb9d79c050
+public = 5f9c95bca3508c24b1d0b1559c83ef5b04445cc4581c8e86d8224eddd09f11d7
+shared = 0000000000000000000000000000000000000000000000000000000000000000
+flags = LowOrderPublic,NonCanonicalPublic,SpecialPublicKey,ZeroSharedSecret
+
+tcId = 68
+result = acceptable
+private = 2064b2f4c9dc97ec7cf58932fdfa3265ba6ea4d11f0259b8efc8afb35db88c48
+public = ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+shared = 0000000000000000000000000000000000000000000000000000000000000000
+flags = LowOrderPublic,NonCanonicalPublic,SpecialPublicKey,ZeroSharedSecret,Twist
+
+tcId = 69
+result = acceptable
+private = 786a33a4f7af297a20e7642925932bf509e7070fa1bc36986af1eb13f4f50b55
+public = 0000000000000000000000000000000000000000000000000000000000000000
+shared = 0000000000000000000000000000000000000000000000000000000000000000
+flags = LowOrderPublic,ZeroSharedSecret
+
+tcId = 70
+result = acceptable
+private = 786a33a4f7af297a20e7642925932bf509e7070fa1bc36986af1eb13f4f50b55
+public = 0100000000000000000000000000000000000000000000000000000000000000
+shared = 0000000000000000000000000000000000000000000000000000000000000000
+flags = LowOrderPublic,ZeroSharedSecret
+
+tcId = 71
+result = acceptable
+private = 786a33a4f7af297a20e7642925932bf509e7070fa1bc36986af1eb13f4f50b55
+public = ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f
+shared = 0000000000000000000000000000000000000000000000000000000000000000
+flags = LowOrderPublic,ZeroSharedSecret,Twist
+
+tcId = 78
+result = acceptable
+private = 786a33a4f7af297a20e7642925932bf509e7070fa1bc36986af1eb13f4f50b55
+public = ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+shared = 0000000000000000000000000000000000000000000000000000000000000000
+flags = LowOrderPublic,ZeroSharedSecret,Twist
+
+tcId = 84
+result = acceptable
+private = 7887889bac4c629a101d3724f2ed8b98d936fde79e1a1f77d86779626bf8f263
+public = 0000000000000000000000000000000000000000000000000000000000000080
+shared = 0000000000000000000000000000000000000000000000000000000000000000
+flags = SmallPublicKey,LowOrderPublic,NonCanonicalPublic,SpecialPublicKey,ZeroSharedSecret
+
+tcId = 85
+result = acceptable
+private = 584fceaebae944bfe93b2e0d0a575f706ce5ada1da2b1311c3b421f9186c7a6f
+public = eeffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f
+shared = 0000000000000000000000000000000000000000000000000000000000000000
+flags = SmallPublicKey,LowOrderPublic,NonCanonicalPublic,SpecialPublicKey,ZeroSharedSecret
+
+tcId = 87
+result = acceptable
+private = 0016b62af5cabde8c40938ebf2108e05d27fa0533ed85d70015ad4ad39762d54
+public = efffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f
+shared = b4d10e832714972f96bd3382e4d082a21a8333a16315b3ffb536061d2482360d
+flags = NonCanonicalPublic,Twist,SpecialPublicKey
+
+tcId = 88
+result = acceptable
+private = d83650ba7cec115881916255e3fa5fa0d6b8dcf968731bd2c9d2aec3f561f649
+public = f0ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f
+shared = 515eac8f1ed0b00c70762322c3ef86716cd2c51fe77cec3d31b6388bc6eea336
+flags = NonCanonicalPublic,Twist,SpecialPublicKey
+
+tcId = 89
+result = acceptable
+private = 88dd14e2711ebd0b0026c651264ca965e7e3da5082789fbab7e24425e7b4377e
+public = f1ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f
+shared = 6919992d6a591e77b3f2bacbd74caf3aea4be4802b18b2bc07eb09ade3ad6662
+flags = NonCanonicalPublic,SpecialPublicKey
+
+tcId = 90
+result = acceptable
+private = 98c2b08cbac14e15953154e3b558d42bb1268a365b0ef2f22725129d8ac5cb7f
+public = ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f
+shared = 9c034fcd8d3bf69964958c0105161fcb5d1ea5b8f8abb371491e42a7684c2322
+flags = NonCanonicalPublic,SpecialPublicKey
+
+tcId = 95
+result = acceptable
+private = c8e0330ae9dceeff887fba761225879a4bd2e0db08799244136e4721b2c88970
+public = dbffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+shared = dfe60831c9f4f96c816e51048804dbdc27795d760eced75ef575cbe3b464054b
+flags = NonCanonicalPublic,SpecialPublicKey,Twist
+
+tcId = 97
+result = acceptable
+private = 9041c6e044a277df8466275ca8b5ee0da7bc028648054ade5c592add3057474e
+public = eaffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+shared = 13da5695a4c206115409b5277a934782fe985fa050bc902cba5616f9156fe277
+flags = NonCanonicalPublic,SpecialPublicKey,Twist
+
+tcId = 100
+result = valid
+private = a046e36bf0527c9d3b16154b82465edd62144c0ac1fc5a18506a2244ba449a44
+public = e6db6867583030db3594c1a424b15f7c726624ec26b3353b10a903a6d0ab1c4c
+shared = c3da55379de9c6908e94ea4df28d084f32eccf03491c71f754b4075577a28552
+flags = Ktv
+
+tcId = 101
+result = acceptable
+private = 4866e9d4d1b4673c5ad22691957d6af5c11b6421e0ea01d42ca4169e7918ba4d
+public = e5210f12786811d3f4b7959d0538ae2c31dbe7106fc03c3efc4cd549c715a413
+shared = 95cbde9476e8907d7aade45cb4b873f88b595a68799fa152e6f8f7647aac7957
+flags = Ktv,Twist
+
+tcId = 102
+result = valid
+private = 77076d0a7318a57d3c16c17251b26645df4c2f87ebc0992ab177fba51db92c2a
+public = de9edb7d7b7dc1b4d35b61c2ece435373f8343c85b78674dadfc7e146f882b4f
+shared = 4a5d9d5ba4ce2de1728e3bf480350f25e07e21c947d19e3376f09b3c1e161742
+flags = Ktv
+
+tcId = 103
+result = acceptable
+private = 60a3a4f130b98a5be4b1cedb7cb85584a3520e142d474dc9ccb909a073a9767f
+public = b7b6d39c765cb60c0c8542f4f3952ffb51d3002d4aeb9f8ff988b192043e6d0a
+shared = 0200000000000000000000000000000000000000000000000000000000000000
+flags = EdgeCaseShared,Twist
+
+tcId = 104
+result = valid
+private = 60a3a4f130b98a5be4b1cedb7cb85584a3520e142d474dc9ccb909a073a9767f
+public = 3b18df1e50b899ebd588c3161cbd3bf98ebcc2c1f7df53b811bd0e91b4d5153d
+shared = 0900000000000000000000000000000000000000000000000000000000000000
+flags = EdgeCaseShared
+
+tcId = 105
+result = valid
+private = 60a3a4f130b98a5be4b1cedb7cb85584a3520e142d474dc9ccb909a073a9767f
+public = cab6f9e7d8ce00dfcea9bbd8f069ef7fb2ac504abf83b87db601b5ae0a7f7615
+shared = 1000000000000000000000000000000000000000000000000000000000000000
+flags = EdgeCaseShared
+
+tcId = 106
+result = acceptable
+private = 60a3a4f130b98a5be4b1cedb7cb85584a3520e142d474dc9ccb909a073a9767f
+public = 4977d0d897e1ba566590f60f2eb0db6f7b24c13d436918ccfd32708dfad7e247
+shared = feffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff3f
+flags = EdgeCaseShared,Twist
+
+tcId = 117
+result = acceptable
+private = c8d07c46bbfb827753b92c70e49583ce8bfa44641a7382258ea903d6a832c96b
+public = 0000000000000000000000000000000000000000000000000000000000000000
+shared = 0000000000000000000000000000000000000000000000000000000000000000
+flags = EdgeCaseMultiplication,SmallPublicKey,LowOrderPublic,ZeroSharedSecret
+
+tcId = 118
+result = acceptable
+private = 90b7ef237a055f348dcb4c4364a59d7d31edc7ab78f2ca254e2c810975c3f543
+public = 0100000000000000000000000000000000000000000000000000000000000000
+shared = 0000000000000000000000000000000000000000000000000000000000000000
+flags = EdgeCaseMultiplication,SmallPublicKey,LowOrderPublic,ZeroSharedSecret
+
+tcId = 119
+result = acceptable
+private = e0a8be63315c4f0f0a3fee607f44d30a55be63f09561d9af93e0a1c9cf0ed751
+public = 0200000000000000000000000000000000000000000000000000000000000000
+shared = 0c50ac2bfb6815b47d0734c5981379882a24a2de6166853c735329d978baee4d
+flags = EdgeCaseMultiplication,Twist
+
+tcId = 120
+result = valid
+private = 0840a8af5bc4c48da8850e973d7e14220f45c192cea4020d377eecd25c7c3643
+public = 1200000000000000000000000000000000000000000000000000000000000000
+shared = 77557137a2a2a651c49627a9b239ac1f2bf78b8a3e72168ccecc10a51fc5ae66
+flags = EdgeCaseMultiplication
+
+tcId = 121
+result = acceptable
+private = 0092229c753a71284d0853909470ad847ab62f439ea51482fb41d30cc3b44743
+public = 1400000000000000000000000000000000000000000000000000000000000000
+shared = c88e719ae5c2248b5f90da346a92ae214f44a5d129fd4e9c26cf6a0da1efe077
+flags = EdgeCaseMultiplication,Twist
+
+tcId = 122
+result = valid
+private = b8da2bd2d7cf25a3e54e5f87ee15911effb9ff86baec4076d56c8e953670bf5b
+public = 0000000000000000000000000080000000000000000000000000000000000000
+shared = 4bf6789c7ea036f973cde0af02d6fdb9b64a0b957022111439570fad7d7a453f
+flags = EdgeCaseMultiplication
+
+tcId = 154
+result = acceptable
+private = 18630f93598637c35da623a74559cf944374a559114c7937811041fc8605564a
+public = ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f
+shared = 0000000000000000000000000000000000000000000000000000000000000000
+flags = EdgeCaseMultiplication,LowOrderPublic,Twist,ZeroSharedSecret
+
+tcId = 165
+result = acceptable
+private = 5891c9272cf9a197735b701e5715268d36d7436b7e351a3e997a0862e4807d4d
+public = e0eb7a7c3b41b8ae1656e3faf19fc46ada098deb9c32b1fd866205165f49b800
+shared = 0000000000000000000000000000000000000000000000000000000000000000
+flags = EdgeCaseMultiplication,LowOrderPublic,ZeroSharedSecret
+
+tcId = 166
+result = acceptable
+private = c0f9c60aea73731d92ab5ed9f4cea122f9a6eb2577bda72f94948fea4d4cc65d
+public = 5f9c95bca3508c24b1d0b1559c83ef5b04445cc4581c8e86d8224eddd09f1157
+shared = 0000000000000000000000000000000000000000000000000000000000000000
+flags = EdgeCaseMultiplication,LowOrderPublic,ZeroSharedSecret
+
+tcId = 511
+result = valid
+private = a023cdd083ef5bb82f10d62e59e15a6800000000000000000000000000000050
+public = 6c05871352a451dbe182ed5e6ba554f2034456ffe041a054ff9cc56b8e946376
+shared = 6c05871352a451dbe182ed5e6ba554f2034456ffe041a054ff9cc56b8e946376
+flags = EdgeCasePrivateKey
+
+tcId = 513
+result = valid
+private = 4855555555555555555555555555555555555555555555555555555555555555
+public = 3e3e7708ef72a6dd78d858025089765b1c30a19715ac19e8d917067d208e0666
+shared = 63ef7d1c586476ec78bb7f747e321e01102166bf967a9ea9ba9741f49d439510
+flags = EdgeCasePrivateKey
+

@@ -10,7 +10,7 @@ members = [
 [workspace.package]
 version = "0.1.0"
 edition = "2024"
-rust-version = "1.85"
+rust-version = "1.87"
 license = "MIT"
 authors = ["Leo Pellandini"]
 publish = false
@@ -20,10 +20,10 @@ janus-core = { path = "crates/janus-core" }
 janus-channel = { path = "crates/janus-channel" }
 
 # --- Cryptographic primitives (never re-implemented here) ---
-ml-kem = "0.3.3"
-ml-dsa = "0.1.1"
-x25519-dalek = "3.0.0"
-ed25519-dalek = "3.0.0"
+ml-kem = { version = "0.3.3", default-features = false, features = ["zeroize"] }
+ml-dsa = { version = "0.1.1", default-features = false, features = ["alloc", "rand_core", "zeroize"] }
+x25519-dalek = { version = "3.0.0", default-features = false, features = ["zeroize", "precomputed-tables"] }
+ed25519-dalek = { version = "3.0.0", default-features = false, features = ["fast", "zeroize"] }
 hkdf = "0.13.0"
 hmac = "0.13.0"
 sha2 = "0.11.1"
@@ -31,7 +31,7 @@ chacha20poly1305 = "0.11.0"
 zeroize = { version = "1.9.1", features = ["derive"] }
 subtle = "2.6.1"
 rand_core = "0.10.1"
-getrandom = "0.4.3"
+getrandom = { version = "0.4.3", features = ["sys_rng"] }
 
 # --- Tooling ---
 thiserror = "2.0.21"
