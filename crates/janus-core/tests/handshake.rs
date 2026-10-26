@@ -90,10 +90,10 @@ fn run_with(which: Msg, tamper: impl FnOnce(&mut Vec<u8>)) -> Result<(Session, S
     let mut rng = rng();
     let mut tamper = Some(tamper);
     let mut maybe = |m: Msg, bytes: &mut Vec<u8>| {
-        if std::mem::discriminant(&m) == std::mem::discriminant(&which) {
-            if let Some(t) = tamper.take() {
-                t(bytes);
-            }
+        if std::mem::discriminant(&m) == std::mem::discriminant(&which)
+            && let Some(t) = tamper.take()
+        {
+            t(bytes);
         }
     };
     let (c, mut hello) = handshake::client_start(&p.client, &mut rng);

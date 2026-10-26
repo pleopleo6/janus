@@ -23,6 +23,17 @@ so that an attacker has to break **both** to win:
 | Authentication    | Ed25519   | ML-DSA-65    | **both** signatures must verify, else abort      |
 | Record protection | —         | —            | ChaCha20-Poly1305 (256-bit key, PQ-safe enough)  |
 
+## Documentation
+
+- [`docs/DESIGN.md`](docs/DESIGN.md): protocol, key schedule, threat model,
+  **what is not guaranteed**, comparison with X-Wing / PQXDH / TLS 1.3 hybrid,
+  measurements.
+- [`fuzz/README.md`](fuzz/README.md): fuzz targets and results.
+
+At a glance: a handshake is **13.2 kB** (vs 0.4 kB for the same protocol with
+classical primitives only) and costs **≈ 1.2 ms** of CPU for both sides
+together; see the design notes for details.
+
 ## Workspace layout
 
 | Crate                                        | Role                                                         |
@@ -30,8 +41,8 @@ so that an attacker has to break **both** to win:
 | [`janus-core`](crates/janus-core)            | primitive wrappers, key schedule, sans-IO handshake machine  |
 | [`janus-channel`](crates/janus-channel)      | record encryption / decryption, framing, rekey, anti-replay  |
 | [`janus-cli`](crates/janus-cli)              | TCP demo client / server (tokio)                             |
-| [`janus-bench`](crates/janus-bench)          | criterion benchmarks                                         |
-| [`fuzz`](fuzz)                               | `cargo-fuzz` targets for the message parsers                 |
+| [`janus-bench`](crates/janus-bench)          | criterion benchmarks and message-size report                 |
+| [`fuzz`](fuzz)                               | `cargo-fuzz` targets (parsers, server, record layer)         |
 
 No cryptographic primitive is implemented here: everything comes from
 RustCrypto (`ml-kem`, `ml-dsa`, `hkdf`, `hmac`, `sha2`, `chacha20poly1305`)
