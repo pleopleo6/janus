@@ -9,6 +9,15 @@ authors.workspace = true
 publish.workspace = true
 
 [dependencies]
+janus-core.workspace = true
+chacha20poly1305.workspace = true
+zeroize.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+getrandom.workspace = true
+rand_core.workspace = true
+proptest.workspace = true
 
 [lints]
 workspace = true
