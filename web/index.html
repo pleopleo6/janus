@@ -1,0 +1,603 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Janus Handshake Lab</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: one instrument column. Wire diagram on top, inspector + checks below, record layer last. */
+:root {
+  --bg: #f5f6f8;
+  --surface: #ffffff;
+  --ink: #12161d;
+  --muted: #5c6573;
+  --faint: #8b93a0;
+  --line: #e1e4e9;
+  --protocol: #c5cad3;
+  --classical: #6f86a6;
+  --pq: #4f46c8;
+  --pq-soft: #ecebfb;
+  --ok: #1d7f4e;
+  --ok-soft: #e5f3ec;
+  --fail: #c0362c;
+  --fail-soft: #fbe9e7;
+  --focus: #4f46c8;
+  --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --r: 10px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e1116; --surface: #151920; --ink: #e7eaef; --muted: #9aa3b0; --faint: #6c7480;
+    --line: #252b34; --protocol: #3b424d; --classical: #7d93b3; --pq: #8d85ff; --pq-soft: #23214a;
+    --ok: #4cc28a; --ok-soft: #13291f; --fail: #ff7a6e; --fail-soft: #34171a; --focus: #8d85ff;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e1116; --surface: #151920; --ink: #e7eaef; --muted: #9aa3b0; --faint: #6c7480;
+  --line: #252b34; --protocol: #3b424d; --classical: #7d93b3; --pq: #8d85ff; --pq-soft: #23214a;
+  --ok: #4cc28a; --ok-soft: #13291f; --fail: #ff7a6e; --fail-soft: #34171a; --focus: #8d85ff;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font: 400 15px/1.55 var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+.wrap {
+  max-width: 1120px; margin: 0 auto;
+  padding-block: 40px 64px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid; gap: 28px;
+}
+h1, h2, h3 { margin: 0; text-wrap: balance; font-weight: 600; letter-spacing: -0.01em; }
+h1 { font-size: 26px; }
+h2 { font-size: 17px; }
+p { margin: 0; }
+.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.muted { color: var(--muted); }
+.label {
+  font-size: 11px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: var(--faint);
+}
+button { font: inherit; color: inherit; }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+/* Header */
+header { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px 32px; }
+.brand { display: grid; gap: 6px; }
+.brand p { color: var(--muted); max-width: 62ch; }
+.suite { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  font: 500 12px/1 var(--font-mono); padding: 7px 10px; border-radius: 999px;
+  border: 1px solid var(--line); background: var(--surface); color: var(--muted); white-space: nowrap;
+}
+.dot { width: 8px; height: 8px; border-radius: 2px; flex: none; }
+.dot.protocol { background: var(--protocol); }
+.dot.classical { background: var(--classical); }
+.dot.pq { background: var(--pq); }
+
+/* Panels */
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); }
+.panel-head {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 16px 20px; border-bottom: 1px solid var(--line);
+}
+.panel-body { padding: 20px; }
+
+/* Scenario picker */
+.scenarios { display: flex; flex-wrap: wrap; gap: 6px; }
+.scn {
+  border: 1px solid var(--line); background: transparent; border-radius: 8px;
+  padding: 7px 12px; font-size: 13px; cursor: pointer; color: var(--muted);
+}
+.scn:hover { color: var(--ink); border-color: var(--faint); }
+.scn[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--bg); }
+.scenario-note { padding: 14px 20px 0; color: var(--muted); font-size: 14px; max-width: 80ch; }
+
+/* Outcome pill */
+.pill {
+  display: inline-flex; align-items: center; gap: 8px; border-radius: 999px;
+  padding: 6px 12px; font-size: 13px; font-weight: 500; white-space: nowrap;
+}
+.pill.ok { background: var(--ok-soft); color: var(--ok); }
+.pill.fail { background: var(--fail-soft); color: var(--fail); }
+.pill.idle { background: var(--bg); color: var(--muted); }
+.pill::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+
+/* Wire diagram */
+.wire { display: grid; gap: 18px; }
+.ends { display: grid; grid-template-columns: 1fr 1fr; font-weight: 600; font-size: 14px; }
+.ends span:last-child { text-align: right; }
+.msg { display: grid; gap: 8px; }
+.msg-meta { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.msg-name { font-weight: 500; display: flex; align-items: baseline; gap: 10px; }
+.arrow { font-family: var(--font-mono); color: var(--faint); font-size: 13px; }
+.msg-size { font-size: 13px; color: var(--muted); }
+.bar {
+  position: relative; display: flex; gap: 2px; height: 30px; border-radius: 6px; overflow: hidden;
+}
+.seg {
+  border: 0; padding: 0; cursor: pointer; min-width: 5px; height: 100%;
+  transition: filter .15s, opacity .15s;
+}
+.seg.protocol { background: var(--protocol); }
+.seg.classical { background: var(--classical); }
+.seg.pq { background: var(--pq); }
+.seg:hover { filter: brightness(1.12); }
+.seg[aria-current="true"] { box-shadow: inset 0 0 0 2px var(--ink); }
+.msg.unsent .bar { opacity: .25; }
+.msg.unsent .msg-size::after { content: " · not sent"; color: var(--fail); }
+.tick {
+  position: absolute; top: -3px; bottom: -3px; width: 3px; margin-left: -1px;
+  background: var(--fail); border-radius: 2px; pointer-events: none;
+}
+.legend { display: flex; flex-wrap: wrap; gap: 16px; font-size: 12px; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+
+/* Inspector + checks */
+.split { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: 20px; }
+@media (max-width: 860px) { .split { grid-template-columns: minmax(0, 1fr); } }
+.inspector { display: grid; gap: 14px; align-content: start; }
+.field-title { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 12px; }
+.kind { font-size: 12px; font-weight: 500; padding: 3px 8px; border-radius: 6px; }
+.kind.pq { background: var(--pq-soft); color: var(--pq); }
+.kind.classical { background: var(--bg); color: var(--classical); }
+.kind.protocol { background: var(--bg); color: var(--muted); }
+.field-range { font-size: 12px; color: var(--faint); }
+.about { color: var(--muted); max-width: 64ch; }
+.hex {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(26px, 1fr)); gap: 2px;
+  font: 400 12px/1 var(--font-mono);
+}
+.hex button {
+  border: 0; background: transparent; padding: 5px 0; border-radius: 4px; cursor: pointer;
+  color: var(--muted); text-align: center;
+}
+.hex button:hover { background: var(--pq-soft); color: var(--ink); }
+.hex button.flipped { background: var(--fail); color: var(--surface); }
+.hint { font-size: 13px; color: var(--faint); }
+
+.checks { display: grid; gap: 18px; align-content: start; }
+.phase { display: grid; gap: 6px; }
+.phase-head { display: flex; justify-content: space-between; gap: 12px; }
+.phase-head .mono { font-size: 12px; color: var(--faint); }
+.step { display: grid; grid-template-columns: 18px 1fr; gap: 10px; align-items: start; font-size: 14px; }
+.mark { font: 500 13px/1.55 var(--font-mono); text-align: center; }
+.step.ok .mark { color: var(--ok); }
+.step.fail .mark { color: var(--fail); }
+.step.fail { color: var(--fail); font-weight: 500; }
+.step.skipped { color: var(--faint); }
+.err { font: 400 12px/1.4 var(--font-mono); color: var(--fail); margin-left: 28px; }
+
+/* Session */
+.session { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 24px; }
+@media (max-width: 640px) { .session { grid-template-columns: minmax(0, 1fr); } }
+.kv { display: grid; gap: 4px; min-width: 0; }
+.kv .mono { font-size: 13px; overflow-wrap: anywhere; }
+.match { grid-column: 1 / -1; font-size: 14px; color: var(--muted); }
+
+/* Channel */
+.composer { display: flex; flex-wrap: wrap; gap: 8px; }
+.composer input {
+  flex: 1 1 260px; min-width: 0; padding: 10px 12px; border-radius: 8px;
+  border: 1px solid var(--line); background: var(--bg); color: var(--ink); font: inherit;
+}
+.btn {
+  border: 1px solid var(--ink); background: var(--ink); color: var(--bg);
+  border-radius: 8px; padding: 9px 14px; cursor: pointer; font-size: 14px; font-weight: 500;
+}
+.btn.ghost { background: transparent; color: var(--ink); border-color: var(--line); }
+.btn.ghost:hover { border-color: var(--faint); }
+.btn:disabled { opacity: .4; cursor: not-allowed; }
+.attacks { display: flex; flex-wrap: wrap; gap: 8px; }
+.chan-state { display: flex; flex-wrap: wrap; gap: 8px 20px; font-size: 13px; color: var(--muted); }
+.chan-state b { color: var(--ink); font-weight: 500; }
+.log { display: grid; gap: 0; }
+.event { display: grid; gap: 8px; padding: 14px 0; border-top: 1px solid var(--line); }
+.event:first-child { border-top: 0; padding-top: 0; }
+.event-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 16px; font-size: 14px; }
+.event-head .what { font-weight: 500; }
+.rec { display: grid; gap: 6px; }
+.rec-bar { display: flex; gap: 2px; height: 16px; border-radius: 4px; overflow: hidden; }
+.rec-bar span { min-width: 6px; }
+.r-hdr { background: var(--protocol); }
+.r-seq { background: var(--classical); }
+.r-ct { background: var(--pq); opacity: .55; }
+.r-tag { background: var(--pq); }
+.rec-meta { font: 400 12px/1.4 var(--font-mono); color: var(--faint); overflow-wrap: anywhere; }
+.verdict { font-size: 14px; }
+.verdict.ok { color: var(--ok); }
+.verdict.fail { color: var(--fail); }
+.why { font-size: 13px; color: var(--muted); }
+
+footer { display: grid; gap: 8px; font-size: 13px; color: var(--muted); }
+footer .figures { display: flex; flex-wrap: wrap; gap: 8px 28px; }
+footer b { color: var(--ink); font-weight: 600; }
+.loading { color: var(--muted); }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <span class="label">Janus · educational, not production-ready</span>
+      <h1>Hybrid post-quantum handshake lab</h1>
+      <p>Two peers authenticate each other and agree on keys with classical and post-quantum cryptography at once. Everything below runs the real Rust implementation, compiled to WebAssembly, in your browser.</p>
+    </div>
+    <div class="suite" aria-label="Algorithms">
+      <span class="chip"><span class="dot classical"></span>X25519</span>
+      <span class="chip"><span class="dot pq"></span>ML-KEM-768</span>
+      <span class="chip"><span class="dot classical"></span>Ed25519</span>
+      <span class="chip"><span class="dot pq"></span>ML-DSA-65</span>
+    </div>
+  </header>
+
+  <section class="panel" aria-labelledby="hs-title">
+    <div class="panel-head">
+      <h2 id="hs-title">Handshake</h2>
+      <span id="outcome" class="pill idle">Loading WebAssembly…</span>
+    </div>
+    <div class="scenario-note" id="scenario-note">Pick a scenario, or click any byte below to flip it in flight.</div>
+    <div class="panel-body" style="display:grid; gap:22px">
+      <div class="scenarios" id="scenarios" role="group" aria-label="Scenario"></div>
+      <div class="wire">
+        <div class="ends"><span>Client</span><span>Server</span></div>
+        <div id="messages" style="display:grid; gap:18px"></div>
+        <div class="legend">
+          <span><span class="dot pq"></span>Post-quantum</span>
+          <span><span class="dot classical"></span>Classical</span>
+          <span><span class="dot protocol"></span>Protocol</span>
+          <span id="timing" class="mono"></span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="split">
+    <section class="panel" aria-labelledby="insp-title">
+      <div class="panel-head"><h2 id="insp-title">Field inspector</h2><span class="hint">Click a byte to flip it</span></div>
+      <div class="panel-body inspector" id="inspector"></div>
+    </section>
+    <section class="panel" aria-labelledby="checks-title">
+      <div class="panel-head"><h2 id="checks-title">Checks, in order</h2></div>
+      <div class="panel-body checks" id="checks"></div>
+    </section>
+  </div>
+
+  <section class="panel" aria-labelledby="session-title">
+    <div class="panel-head"><h2 id="session-title">Session</h2><span class="hint">Compare these out of band to rule out a man in the middle</span></div>
+    <div class="panel-body session" id="session"></div>
+  </section>
+
+  <section class="panel" aria-labelledby="chan-title">
+    <div class="panel-head">
+      <h2 id="chan-title">Encrypted channel</h2>
+      <div class="chan-state" id="chan-state"></div>
+    </div>
+    <div class="panel-body" style="display:grid; gap:18px">
+      <form class="composer" id="composer">
+        <label for="msg-input" class="label" style="flex-basis:100%">Client → server, ChaCha20-Poly1305</label>
+        <input id="msg-input" autocomplete="off" value="Meet at the usual place, 9 pm." maxlength="400">
+        <button class="btn" id="send-btn" type="submit">Send</button>
+      </form>
+      <div class="attacks" role="group" aria-label="Record-layer attacks">
+        <button class="btn ghost" data-attack="replay" type="button">Replay last record</button>
+        <button class="btn ghost" data-attack="reorder" type="button">Reorder two records</button>
+        <button class="btn ghost" data-attack="tamper" type="button">Flip a ciphertext bit</button>
+        <button class="btn ghost" data-attack="truncate" type="button">Cut the stream</button>
+        <button class="btn ghost" data-attack="close" type="button">Close cleanly</button>
+        <button class="btn ghost" id="reset-btn" type="button">New session</button>
+      </div>
+      <div class="log" id="log"></div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="figures">
+      <span>Handshake size <b class="mono">13,216 B</b> hybrid vs <b class="mono">422 B</b> classical only</span>
+      <span>Messages are fixed-length and parsed strictly</span>
+      <span>Demo identities use public seeds</span>
+    </div>
+    <p>Janus is a portfolio project. It has not been audited or formally verified. See docs/DESIGN.md for the threat model and what is not guaranteed.</p>
+  </footer>
+</div>
+
+<script type="module">
+import init, { Lab } from "./pkg/janus_wasm.js";
+
+const SCENARIOS = [
+  { id: "honest", label: "Honest", s: "honest", m: -1, o: 0, k: 0,
+    note: "Both identities are pinned and nothing is altered. Both sides derive the same session." },
+  { id: "rogue-server", label: "Impostor server", s: "rogue-server", m: -1, o: 0, k: 0,
+    note: "An attacker answers the client with its own key pair. The client accepts only the pinned server identity." },
+  { id: "rogue-client", label: "Impostor client", s: "rogue-client", m: -1, o: 0, k: 0,
+    note: "An unknown client completes its side of the handshake. The server refuses it at the pin check." },
+  { id: "downgrade", label: "Version downgrade", s: "honest", m: 0, o: 0, k: 0x03,
+    note: "The protocol version byte is rewritten in flight. The server only speaks version 1 and stops at parsing." },
+  { id: "x25519", label: "X25519 top bit", s: "honest", m: 0, o: 1249, k: 0x80,
+    note: "X25519 ignores the top bit of a public key, so the shared secret does not change. The transcript hash covers the exact bytes, so the server's signature no longer verifies for the client." },
+  { id: "mlkem", label: "Corrupt ML-KEM ciphertext", s: "honest", m: 1, o: 334, k: 0x01,
+    note: "ML-KEM never reports an error: a corrupted ciphertext decapsulates to an unrelated key (implicit rejection). The signature over the transcript catches the change." },
+  { id: "mldsa", label: "Forge ML-DSA half", s: "honest", m: 1, o: 3302, k: 0x01,
+    note: "The Ed25519 half of the server signature is untouched and valid. The ML-DSA half is not, and a hybrid signature needs both." },
+  { id: "finished", label: "Corrupt client Finished", s: "honest", m: 2, o: 5400, k: 0x01,
+    note: "The client's key-confirmation MAC is altered. The server checks it last and rejects the session." },
+];
+
+const PHASES = [
+  { side: "server", title: "Server receives ClientHello", n: 3 },
+  { side: "client", title: "Client receives ServerHello", n: 6 },
+  { side: "server", title: "Server receives ClientFinish", n: 5 },
+];
+const NAMES = ["ClientHello", "ServerHello", "ClientFinish"];
+
+const $ = (id) => document.getElementById(id);
+const fmt = (n) => n.toLocaleString("en-US");
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const group = (hex, n = 32) => hex.slice(0, n).replace(/(.{4})/g, "$1 ").trim();
+const kindLabel = { pq: "Post-quantum", classical: "Classical", protocol: "Protocol" };
+
+let lab, info, report;
+let current = SCENARIOS[0];
+let custom = null;          // { m, o } when the user flipped a byte
+let selected = { m: 1, f: 7 }; // ServerHello, ML-DSA-65 signature
+
+function runHandshake() {
+  const t = custom ? { s: "honest", m: custom.m, o: custom.o, k: 0x01 } : current;
+  const t0 = performance.now();
+  report = JSON.parse(lab.handshake(t.s, t.m, t.o, t.k));
+  report.total = performance.now() - t0;
+  renderScenarios();
+  renderOutcome();
+  renderMessages();
+  renderInspector();
+  renderChecks();
+  renderSession();
+  resetChannelView();
+}
+
+function renderScenarios() {
+  $("scenarios").innerHTML = SCENARIOS.map((s) =>
+    `<button class="scn" type="button" data-id="${s.id}" aria-pressed="${!custom && s.id === current.id}">${esc(s.label)}</button>`
+  ).join("") + (custom ? `<button class="scn" type="button" aria-pressed="true">Custom: ${NAMES[custom.m]} byte ${fmt(custom.o)}</button>` : "");
+  $("scenario-note").textContent = custom
+    ? `You flipped the lowest bit of byte ${fmt(custom.o)} of ${NAMES[custom.m]} (${fieldAt(custom.m, custom.o).name}).`
+    : current.note;
+}
+
+function fieldAt(m, offset) {
+  return info.layouts[m].find((f) => offset >= f.start && offset < f.start + f.len);
+}
+
+function renderOutcome() {
+  const el = $("outcome");
+  if (report.ok) {
+    el.className = "pill ok";
+    el.textContent = "Session established";
+  } else {
+    el.className = "pill fail";
+    el.textContent = `Rejected by ${report.failed_side}: ${report.error_code}`;
+  }
+  const ms = report.phases.map((p) => p.ms).reduce((a, b) => a + b, 0);
+  $("timing").textContent = `${ms.toFixed(1)} ms of CPU in this browser`;
+}
+
+function renderMessages() {
+  $("messages").innerHTML = [0, 1, 2].map((i) => {
+    const msg = report.messages.find((x) => x.index === i);
+    const layout = info.layouts[i];
+    const len = layout.at(-1).start + layout.at(-1).len;
+    const segs = layout.map((f, j) =>
+      `<button class="seg ${f.kind}" type="button" style="flex-grow:${f.len}" data-m="${i}" data-f="${j}"
+        aria-current="${selected.m === i && selected.f === j}" title="${esc(f.name)} · ${fmt(f.len)} B"
+        aria-label="${esc(NAMES[i])}: ${esc(f.name)}, ${f.len} bytes"></button>`).join("");
+    const tick = msg && msg.tampered
+      ? `<span class="tick" style="left:${(msg.tampered.offset / len) * 100}%"></span>` : "";
+    return `<div class="msg ${msg ? "" : "unsent"}">
+      <div class="msg-meta">
+        <span class="msg-name"><span class="arrow">${i === 1 ? "server → client" : "client → server"}</span>${NAMES[i]}</span>
+        <span class="msg-size mono">${fmt(len)} B</span>
+      </div>
+      <div class="bar">${segs}${tick}</div>
+    </div>`;
+  }).join("");
+}
+
+function renderInspector() {
+  const f = info.layouts[selected.m][selected.f];
+  const msg = report.messages.find((x) => x.index === selected.m);
+  const shown = Math.min(f.len, 160);
+  let bytes = "";
+  if (msg) {
+    for (let i = 0; i < shown; i++) {
+      const off = f.start + i;
+      const b = msg.hex.slice(off * 2, off * 2 + 2);
+      const flipped = msg.tampered && msg.tampered.offset === off;
+      bytes += `<button type="button" data-off="${off}" class="${flipped ? "flipped" : ""}"
+        title="Flip byte ${fmt(off)}" aria-label="Byte ${off}, value ${b}. Flip it">${b}</button>`;
+    }
+  }
+  $("inspector").innerHTML = `
+    <div class="field-title">
+      <h3>${esc(f.name)}</h3>
+      <span class="kind ${f.kind}">${kindLabel[f.kind]}</span>
+      <span class="field-range mono">${NAMES[selected.m]} · bytes ${fmt(f.start)}–${fmt(f.start + f.len - 1)} · ${fmt(f.len)} B</span>
+    </div>
+    <p class="about">${esc(f.about)}</p>
+    ${msg ? `<div class="hex">${bytes}</div>
+      <p class="hint">${shown < f.len ? `Showing the first ${shown} of ${fmt(f.len)} bytes. ` : ""}Flipping a byte replays the handshake with that change applied on the wire.</p>`
+      : `<p class="hint">This message was never sent: the handshake stopped earlier.</p>`}`;
+}
+
+function renderChecks() {
+  let k = 0;
+  $("checks").innerHTML = PHASES.map((p, i) => {
+    const steps = report.steps.slice(k, k + p.n); k += p.n;
+    const phase = report.phases.find((x, j) => j === i + 1);
+    const failed = steps.some((s) => s.status === "fail");
+    return `<div class="phase">
+      <div class="phase-head"><span class="label">${p.title}</span>${phase ? `<span class="mono">${phase.ms.toFixed(2)} ms</span>` : ""}</div>
+      ${steps.map((s) => `<div class="step ${s.status}"><span class="mark">${s.status === "ok" ? "✓" : s.status === "fail" ? "✕" : "–"}</span><span>${esc(s.label)}</span></div>`).join("")}
+      ${failed ? `<div class="err">${esc(report.error_code)}: ${esc(report.error)}</div>` : ""}
+    </div>`;
+  }).join("");
+}
+
+function renderSession() {
+  const s = report.session;
+  if (!s) {
+    $("session").innerHTML = `<p class="match">No session. The ${esc(report.failed_side)} aborted, so no traffic keys exist on either side and nothing can be sent.</p>`;
+    return;
+  }
+  $("session").innerHTML = `
+    <div class="kv"><span class="label">Client session id</span><span class="mono">${group(s.client_session_id)}</span></div>
+    <div class="kv"><span class="label">Server session id</span><span class="mono">${group(s.server_session_id)}</span></div>
+    <div class="kv"><span class="label">Client authenticated the server as</span><span class="mono">${group(s.client_sees, 24)}…</span></div>
+    <div class="kv"><span class="label">Server authenticated the client as</span><span class="mono">${group(s.server_sees, 24)}…</span></div>
+    <p class="match">${s.matches ? "The session ids match. Each side derived separate keys for each direction from the full transcript." : "The session ids differ."}</p>`;
+}
+
+/* ───────── record layer ───────── */
+
+function resetChannelView() {
+  const open = report.ok;
+  document.querySelectorAll("#composer input, #composer button, [data-attack]").forEach((b) => (b.disabled = !open));
+  $("log").innerHTML = open ? "" : `<p class="why">Establish a session first: run the Honest scenario.</p>`;
+  setChanState(open ? { receiver_state: "open", receiver_epoch: 0, records_received: 0 } : null);
+}
+
+function setChanState(r) {
+  $("chan-state").innerHTML = r
+    ? `<span>Receiver <b>${r.receiver_state}</b></span><span>Key epoch <b class="mono">${r.receiver_epoch}</b></span><span>Records <b class="mono">${r.records_received}</b></span><span>Rekey every <b class="mono">${info.rekey_interval}</b></span>`
+    : `<span>No session</span>`;
+}
+
+const VERDICT = {
+  Replay: "Rejected: sequence number already used.",
+  OutOfOrder: "Rejected: a record is missing before this one.",
+  BadRecord: "Rejected: authentication tag does not match.",
+  Truncated: "Rejected: the stream ended without a Close record. Data may have been cut off.",
+  Failed: "Refused: an earlier attack already shut this channel down. Start a new session.",
+  Closed: "Refused: the client already closed the channel.",
+};
+
+function recordHtml(r) {
+  const ct = Math.max(r.len - 27, 0);
+  const tag = r.hex.slice(-32);
+  return `<div class="rec">
+    <div class="rec-bar" aria-hidden="true">
+      <span class="r-hdr" style="flex-grow:3"></span><span class="r-seq" style="flex-grow:8"></span>
+      <span class="r-ct" style="flex-grow:${Math.max(ct, 4)}"></span><span class="r-tag" style="flex-grow:16"></span>
+    </div>
+    <div class="rec-meta">${esc(r.kind)} · seq ${r.seq} · epoch ${r.epoch} · ${r.len} B · ciphertext ${esc(r.hex.slice(22, 46))}… · tag ${esc(tag)}</div>
+  </div>`;
+}
+
+function logEvent(title, rep) {
+  const parts = [];
+  rep.records.forEach((r, i) => {
+    parts.push(recordHtml(r));
+    const d = rep.deliveries[i];
+    if (d) parts.push(verdictHtml(d));
+  });
+  rep.deliveries.slice(rep.records.length).forEach((d) => parts.push(verdictHtml(d)));
+  if (rep.echo != null) parts.push(`<p class="why">Server echoed it back on the other direction, under a different key.</p>`);
+  const el = document.createElement("div");
+  el.className = "event";
+  el.innerHTML = `<div class="event-head"><span class="what">${esc(title)}</span></div>
+    <p class="why">${esc(rep.explanation)}</p>${parts.join("")}`;
+  $("log").prepend(el);
+  setChanState(rep);
+}
+
+function verdictHtml(d) {
+  if (d.accepted && d.close) return `<p class="verdict ok">Accepted: authenticated end of stream.</p>`;
+  if (d.accepted) return `<p class="verdict ok">Delivered: “${esc(d.plaintext)}”</p>`;
+  return `<p class="verdict fail">${esc(VERDICT[d.error_code] || d.error)}</p>`;
+}
+
+const ATTACK_TITLES = {
+  replay: "Replay", reorder: "Reordering", tamper: "Bit flip", truncate: "Truncation", close: "Clean close",
+};
+
+/* ───────── wiring ───────── */
+
+$("scenarios").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-id]");
+  if (!b) return;
+  current = SCENARIOS.find((s) => s.id === b.dataset.id);
+  try { history.replaceState(null, "", "#" + current.id); } catch (_) {}
+  custom = null;
+  if (current.m >= 0) {
+    selected = { m: current.m, f: info.layouts[current.m].indexOf(fieldAt(current.m, current.o)) };
+  }
+  runHandshake();
+});
+
+$("messages").addEventListener("click", (e) => {
+  const b = e.target.closest(".seg");
+  if (!b) return;
+  selected = { m: +b.dataset.m, f: +b.dataset.f };
+  renderMessages();
+  renderInspector();
+});
+
+$("inspector").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-off]");
+  if (!b) return;
+  const off = +b.dataset.off;
+  custom = custom && custom.m === selected.m && custom.o === off ? null : { m: selected.m, o: off };
+  if (!custom) current = SCENARIOS[0];
+  runHandshake();
+});
+
+$("composer").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const text = $("msg-input").value.trim();
+  if (!text) return;
+  logEvent("Message", JSON.parse(lab.send(text)));
+});
+
+document.querySelector(".attacks").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-attack]");
+  if (b) logEvent(ATTACK_TITLES[b.dataset.attack], JSON.parse(lab.attack(b.dataset.attack)));
+});
+
+$("reset-btn").addEventListener("click", () => {
+  current = SCENARIOS[0];
+  custom = null;
+  runHandshake();
+  if (report.ok) logEvent("Message", JSON.parse(lab.send($("msg-input").value.trim() || "hello")));
+});
+
+try {
+  await init();
+  lab = new Lab();
+  info = JSON.parse(lab.info());
+  const fromHash = SCENARIOS.find((x) => x.id === location.hash.slice(1));
+  if (fromHash) {
+    current = fromHash;
+    if (current.m >= 0) selected = { m: current.m, f: info.layouts[current.m].indexOf(fieldAt(current.m, current.o)) };
+  }
+  runHandshake();
+  if (report.ok) logEvent("Message", JSON.parse(lab.send($("msg-input").value)));
+} catch (err) {
+  const el = $("outcome");
+  el.className = "pill fail";
+  el.textContent = "WebAssembly failed to load";
+  $("scenario-note").textContent = `The lab needs WebAssembly. ${err && err.message ? err.message : err}`;
+  console.error(err);
+}
+</script>
+</body>
+</html>
