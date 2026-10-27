@@ -43,7 +43,20 @@ struct Cli {
 enum Command {
     /// Generate a new identity file and print its fingerprint.
     Keygen {
-        /// Where to write the (unencrypted!) secret identity.
+        /// Where to write the secret identity (never overwritten).
+        #[arg(long)]
+        out: PathBuf,
+        /// Encrypt it with a passphrase (Argon2id + XChaCha20-Poly1305).
+        /// Read from $JANUS_PASSPHRASE, or prompted for.
+        #[arg(long)]
+        encrypt: bool,
+    },
+    /// Write a passphrase-encrypted copy of a plaintext identity.
+    Encrypt {
+        /// Existing (plaintext) identity file.
+        #[arg(long)]
+        id: PathBuf,
+        /// Where to write the encrypted copy.
         #[arg(long)]
         out: PathBuf,
     },
@@ -108,7 +121,7 @@ struct Common {
 
 impl Common {
     fn config(&self) -> Result<(Config, Options)> {
-        let identity = identity::load(&self.id)?;
+        let identity = load_identity(&self.id)?;
         let mut trust = TrustStore::new();
         for fp in &self.trust {
             trust.add(identity::parse_fingerprint(fp)?);
@@ -164,6 +177,39 @@ fn report_ending(ending: &Ending) {
     }
 }
 
+/// Passphrase from `$JANUS_PASSPHRASE`, or prompted for without echo.
+fn passphrase(prompt: &str) -> Result<identity::Passphrase> {
+    if let Ok(p) = std::env::var("JANUS_PASSPHRASE") {
+        return Ok(zeroize::Zeroizing::new(p));
+    }
+    rpassword::prompt_password(prompt)
+        .map(zeroize::Zeroizing::new)
+        .context("cannot read the passphrase (set JANUS_PASSPHRASE when there is no terminal)")
+}
+
+/// New passphrase: from the environment, or prompted for twice.
+fn new_passphrase() -> Result<identity::Passphrase> {
+    if std::env::var_os("JANUS_PASSPHRASE").is_some() {
+        return passphrase("");
+    }
+    let first = passphrase("New passphrase: ")?;
+    let again = passphrase("Repeat passphrase: ")?;
+    anyhow::ensure!(*first == *again, "the passphrases differ");
+    Ok(first)
+}
+
+fn load_identity(path: &std::path::Path) -> Result<IdentityKeypair> {
+    if !identity::is_encrypted(path)? {
+        eprintln!(
+            "[janus] warning: {} is not encrypted (protect it with `janus encrypt`)",
+            path.display()
+        );
+    }
+    identity::load(path, || {
+        passphrase(&format!("Passphrase for {}: ", path.display()))
+    })
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
     let cli = Cli::parse();
@@ -175,14 +221,39 @@ async fn main() -> Result<()> {
         .map_err(|e| anyhow::anyhow!("OS random number generator unavailable: {e}"))?;
 
     match cli.command {
-        Command::Keygen { out } => {
+        Command::Keygen { out, encrypt } => {
+            let pass = if encrypt {
+                Some(new_passphrase()?)
+            } else {
+                None
+            };
             let id = IdentityKeypair::generate(&mut UnwrapErr(getrandom::SysRng));
-            identity::save(&out, &id)?;
-            eprintln!("[janus] wrote {} (keep it secret)", out.display());
+            identity::save(&out, &id, pass.as_ref())?;
+            let how = if encrypt {
+                "encrypted"
+            } else {
+                "NOT encrypted"
+            };
+            eprintln!("[janus] wrote {} ({how}; keep it secret)", out.display());
             println!("{}", id.public().fingerprint());
         }
+        Command::Encrypt { id, out } => {
+            anyhow::ensure!(
+                !identity::is_encrypted(&id)?,
+                "{} is already encrypted",
+                id.display()
+            );
+            let identity = identity::load(&id, || anyhow::bail!("unexpected passphrase request"))?;
+            identity::save(&out, &identity, Some(&new_passphrase()?))?;
+            eprintln!(
+                "[janus] wrote {}; check it, then delete the plaintext {}",
+                out.display(),
+                id.display()
+            );
+            println!("{}", identity.public().fingerprint());
+        }
         Command::Fingerprint { id } => {
-            println!("{}", identity::load(&id)?.public().fingerprint());
+            println!("{}", load_identity(&id)?.public().fingerprint());
         }
         Command::Serve {
             listen,

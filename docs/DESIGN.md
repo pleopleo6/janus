@@ -239,7 +239,11 @@ including replay, reordering and truncation detection.
   rate limits.
 - **No PKI, revocation or key rotation.** Pins are managed by hand; a wrong pin
   is a silent MITM unless users compare session ids.
-- **Unencrypted identity files** (mode 0600 only).
+- **Identity files are only as strong as their passphrase.** `keygen
+  --encrypt` seals the seed with XChaCha20-Poly1305 under an Argon2id key
+  (64 MiB, t=3, parameters authenticated); without `--encrypt` the seed is
+  stored in clear (mode 0600) and the CLI warns on every use. A decrypted key
+  lives in process memory for the whole session.
 - **Traffic analysis.** No padding: record lengths and timing leak.
 - **Side channels.** Timing / power behaviour depends on the RustCrypto and
   dalek implementations; Rust gives no constant-time guarantee across compiler

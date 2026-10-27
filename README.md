@@ -130,8 +130,11 @@ server refuses gets a clear error instead of a session that silently dies.
 
 Both sides print the same *session id*: comparing it out of band (like a
 Signal safety number) confirms there is no man in the middle. Peers are
-authenticated by pinned fingerprints only (no PKI). Identity files are
-**unencrypted** on disk (mode 0600).
+authenticated by pinned fingerprints only (no PKI). Use `keygen --encrypt`
+(or `janus encrypt` on an existing file) to protect an identity with a
+passphrase (Argon2id + XChaCha20-Poly1305); `$JANUS_PASSPHRASE` supplies it
+non-interactively. Plaintext identity files are still accepted, with a
+warning.
 
 Without `--echo`, the server chats over stdin/stdout with one client at a
 time.
