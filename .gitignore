@@ -5,3 +5,4 @@
 /fuzz/coverage
 *.janus-id
 .DS_Store
+/formal/proof.log
