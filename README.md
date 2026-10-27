@@ -23,6 +23,35 @@ so that an attacker has to break **both** to win:
 | Authentication    | Ed25519   | ML-DSA-65    | **both** signatures must verify, else abort      |
 | Record protection | —         | —            | ChaCha20-Poly1305 (256-bit key, PQ-safe enough)  |
 
+## Post-quantum tunnel
+
+`janus tunnel` + `janus serve --forward` protect **any existing TCP
+service** (a database, SSH, an internal HTTP API) without modifying it, like
+`stunnel` or `spiped` but with a hybrid post-quantum handshake:
+
+```sh
+# on the server, in front of a service listening on 127.0.0.1:5432
+janus serve --listen 0.0.0.0:7878 --forward 127.0.0.1:5432 --id server.id --trust "$CLIENT_FP"
+# on the client
+janus tunnel --listen 127.0.0.1:15432 --to server.example:7878 --id client.id --trust "$SERVER_FP"
+psql -h 127.0.0.1 -p 15432 …   # unmodified client, traffic is now protected
+```
+
+## As a library
+
+`janus-tokio` turns any tokio transport into an authenticated, encrypted
+`AsyncRead + AsyncWrite` stream:
+
+```rust
+let tcp = tokio::net::TcpStream::connect("server.example:7878").await?;
+let mut stream = janus_tokio::connect(tcp, &config, janus_tokio::Options::default()).await?;
+stream.write_all(b"hello").await?;   // sealed into ChaCha20-Poly1305 records
+stream.shutdown().await?;            // authenticated close_notify
+```
+
+`connect` returns only after the server accepted the client; reads end with
+`UnexpectedEof` if the peer's stream is cut without an authenticated close.
+
 ## Handshake lab (browser)
 
 `web/` is a single-page lab that runs the real `janus-core` and
@@ -57,7 +86,8 @@ together; see the design notes for details.
 |----------------------------------------------|--------------------------------------------------------------|
 | [`janus-core`](crates/janus-core)            | primitive wrappers, key schedule, sans-IO handshake machine  |
 | [`janus-channel`](crates/janus-channel)      | record encryption / decryption, framing, rekey, anti-replay  |
-| [`janus-cli`](crates/janus-cli)              | TCP demo client / server (tokio)                             |
+| [`janus-tokio`](crates/janus-tokio)          | async `JanusStream` (`AsyncRead`/`AsyncWrite`), `connect` / `accept` |
+| [`janus-cli`](crates/janus-cli)              | `janus` CLI: keygen, chat, echo, TCP tunnel                  |
 | [`janus-bench`](crates/janus-bench)          | criterion benchmarks and message-size report                 |
 | [`janus-wasm`](crates/janus-wasm)            | WebAssembly bindings for the browser lab (`web/`)            |
 | [`fuzz`](fuzz)                               | `cargo-fuzz` targets (parsers, server, record layer)         |

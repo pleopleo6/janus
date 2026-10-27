@@ -7,6 +7,7 @@ members = [
     "crates/janus-cli",
     "crates/janus-bench",
     "crates/janus-wasm",
+    "crates/janus-tokio",
 ]
 
 [workspace.package]
@@ -20,6 +21,7 @@ publish = false
 [workspace.dependencies]
 janus-core = { path = "crates/janus-core" }
 janus-channel = { path = "crates/janus-channel" }
+janus-tokio = { path = "crates/janus-tokio" }
 
 # --- Cryptographic primitives (never re-implemented here) ---
 ml-kem = { version = "0.3.3", default-features = false, features = ["zeroize"] }

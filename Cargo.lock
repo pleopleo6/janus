@@ -717,6 +717,7 @@ dependencies = [
  "hex",
  "janus-channel",
  "janus-core",
+ "janus-tokio",
  "rand_core",
  "tokio",
  "zeroize",
@@ -740,6 +741,17 @@ dependencies = [
  "thiserror",
  "x25519-dalek",
  "zeroize",
+]
+
+[[package]]
+name = "janus-tokio"
+version = "0.1.0"
+dependencies = [
+ "getrandom",
+ "janus-channel",
+ "janus-core",
+ "rand_core",
+ "tokio",
 ]
 
 [[package]]

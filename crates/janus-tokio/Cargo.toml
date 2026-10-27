@@ -1,0 +1,22 @@
+[package]
+name = "janus-tokio"
+description = "Async (tokio) secure streams over the Janus hybrid post-quantum handshake"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+publish.workspace = true
+
+[dependencies]
+janus-core.workspace = true
+janus-channel.workspace = true
+tokio.workspace = true
+rand_core.workspace = true
+getrandom.workspace = true
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["rt-multi-thread", "macros", "io-util", "time"] }
+
+[lints]
+workspace = true

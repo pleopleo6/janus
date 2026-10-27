@@ -15,6 +15,7 @@ path = "src/main.rs"
 [dependencies]
 janus-core.workspace = true
 janus-channel.workspace = true
+janus-tokio.workspace = true
 tokio.workspace = true
 clap.workspace = true
 anyhow.workspace = true
