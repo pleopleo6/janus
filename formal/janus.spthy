@@ -4,40 +4,48 @@
  * Symbolic (Dolev-Yao) model of the three-message handshake of
  * docs/PROTOCOL.md §6. The attacker controls the network and may, at any
  * time:
- *   - reveal any agent's long-term keys            (RevLtk),
- *   - break Ed25519 / ML-DSA-65 (forge for anyone)  (BreakEd / BreakDsa),
- *   - break X25519 / ML-KEM-768 (recover any
- *     session's ephemeral secret)                   (BreakX / BreakK).
+ *   - reveal any agent's long-term keys             (RevLtk),
+ *   - break Ed25519 / ML-DSA-65 (sign as anyone)     (BreakEd / BreakDsa),
+ *   - break X25519 / ML-KEM-768 (learn the shared
+ *     secret of any session for that KEM)            (BreakX / BreakK).
  *
  * The lemmas state that each property holds unless the attacker broke
  * BOTH primitives of the relevant pair (or compromised the right long-term
  * key before the session). This is the hybrid claim of DESIGN.md §6.
  *
- * Abstractions (see formal/README.md): hashes, HKDF and HMAC are modelled
- * as a free hash function over tagged tuples; ML-KEM is an ideal KEM;
- * signatures are ideal (unforgeable without the key); fixed-length fields,
- * version bytes and randoms are kept as distinct terms. Breaking a primitive
- * is modelled by giving the attacker the corresponding secrets.
+ * Abstractions (see formal/README.md):
+ *   - SHA-384, HKDF and HMAC are a free hash over tagged tuples, and the
+ *     streaming transcript hash is a hash chain (both are injective
+ *     commitments to the same prefix);
+ *   - ML-KEM-768 is an ideal KEM, and X25519 is modelled as a DHKEM (as in
+ *     HPKE, RFC 9180): the server's share encapsulates a fresh secret to the
+ *     client's ephemeral public key. There are no equations: breaking a KEM
+ *     reveals the shared secrets it protects, which is the capability that
+ *     decapsulation would give;
+ *   - signatures are ideal, written as pattern matching (the usual Tamarin
+ *     idiom): a receiver only accepts sign_ed(m, sk) where m is the message
+ *     it expects and pk_ed(sk) is the pinned key. sign_ed is a free
+ *     constructor, so the attacker can build such a term only if it knows
+ *     sk. Tamarin warns that sk is "not derivable" in the receiving rules:
+ *     that warning is expected for this idiom;
+ *   - a ciphertext that is not an encapsulation to the client's key would,
+ *     under ML-KEM implicit rejection, give an unrelated key, so the
+ *     Finished check fails; the model simply only accepts well-formed ones.
  */
 
 theory Janus
 begin
 
-builtins: diffie-hellman, hashing
+builtins: hashing
 
+// No equations: the term algebra is free. A KEM ciphertext encaps(k, pk)
+// hides k; breaking the KEM is modelled by revealing k (rules Break_X /
+// Break_K), which is exactly the capability decapsulation would give.
 functions:
-    pk_ed/1, sign_ed/2, verify_ed/3,
-    pk_dsa/1, sign_dsa/2, verify_dsa/3,
-    true/0,
-    kem_pk/1, encaps/2, decaps/2
-
-equations:
-    verify_ed(sign_ed(m, sk), m, pk_ed(sk)) = true,
-    verify_dsa(sign_dsa(m, sk), m, pk_dsa(sk)) = true,
-    decaps(encaps(k, kem_pk(dk)), dk) = k
-
-restriction Equality:
-    "All x y #i. Eq(x, y) @i ==> x = y"
+    pk_ed/1, sign_ed/2,
+    pk_dsa/1, sign_dsa/2,
+    kem_pk/1, encaps/2,          // ML-KEM-768
+    x_pk/1, x_encaps/2           // X25519, as a DHKEM
 
 /* ───────────── identities ───────────── */
 
@@ -65,92 +73,108 @@ rule Break_Ed:
 rule Break_Dsa:
     [ !Ltk($A, ske, skd) ]  --[ BreakDsa() ]->  [ Out(skd) ]
 
-// A broken KEM lets the attacker recover any session's ephemeral secret.
+// A broken KEM lets the attacker recover any session's shared secret for
+// that KEM (equivalently: decapsulate any ciphertext).
 rule Break_X:
-    [ !EphX(x) ]            --[ BreakX() ]->    [ Out(x) ]
+    [ !SsX(k) ]             --[ BreakX() ]->    [ Out(k) ]
 
 rule Break_K:
-    [ !EphK(dk) ]           --[ BreakK() ]->    [ Out(dk) ]
+    [ !SsK(k) ]             --[ BreakK() ]->    [ Out(k) ]
 
 /* ───────────── handshake ───────────── */
+
+/*
+ * Transcript. The implementation hashes the growing transcript with
+ * streaming SHA-384 (TH(x) for successive prefixes x). Here it is a hash
+ * chain: th_n = h(<'th', th_{n-1}, new fields>). In the symbolic model both
+ * are injective commitments to exactly the same prefix, and the chain keeps
+ * terms small enough for Tamarin.
+ */
 
 // Client: ClientHello = <'ch', c_random, ML-KEM ek, X25519 share>.
 rule Client_1:
     [ Fr(~x), Fr(~dk), Fr(~rc), !Ltk($C, skeC, skdC), !Pk($S, pkeS, pkdS) ]
   --[ ClientStart($C, $S) ]->
     [ St_C1($C, $S, ~x, ~dk, ~rc),
-      !EphX(~x), !EphK(~dk),
-      Out(<'ch', ~rc, kem_pk(~dk), 'g' ^ ~x>) ]
+      Out(<'ch', ~rc, kem_pk(~dk), x_pk(~x)>) ]
 
 // Server: encapsulate, derive prk from TH(kex) and ss_mlkem || ss_x25519,
 // sign TH(.. || id_S) with both schemes, MAC TH(.. || sig_S).
+// Every ML-KEM encapsulation key has the form kem_pk(dk); matching on it
+// (rather than accepting an arbitrary term) avoids a partial deconstruction
+// of encaps(~kk, ekC) without restricting the attacker.
 rule Server_1:
-    let ch     = <'ch', rc, ekC, XC>
-        ct     = encaps(~kk, ekC)
-        YS     = 'g' ^ ~y
+    let ch     = <'ch', rc, kem_pk(dkC), x_pk(xC)>
+        ct     = encaps(~kk, kem_pk(dkC))
+        YS     = x_encaps(~kx, x_pk(xC))
         idS    = <pk_ed(skeS), pk_dsa(skdS)>
-        th_kex = h(<'transcript', ch, 'sh', ~rs, ct, YS>)
-        prk    = h(<'extract', th_kex, ~kk, XC ^ ~y>)
-        th_id  = h(<'transcript', ch, 'sh', ~rs, ct, YS, idS>)
+        th_kex = h(<'th', ch, 'sh', ~rs, ct, YS>)
+        prk    = h(<'extract', th_kex, ~kk, ~kx>)
+        th_id  = h(<'th', th_kex, idS>)
         m_s    = <'hybrid-sig', 'server signature', idS, th_id>
         sig_e  = sign_ed(m_s, skeS)
         sig_d  = sign_dsa(m_s, skdS)
-        th_sig = h(<'transcript', ch, 'sh', ~rs, ct, YS, idS, sig_e, sig_d>)
+        th_sig = h(<'th', th_id, sig_e, sig_d>)
         fin_s  = h(<'hmac', h(<'s finished', prk>), th_sig>)
-        sh     = <'sh', ~rs, ct, YS, idS, sig_e, sig_d, fin_s>
+        th_sh  = h(<'th', th_sig, fin_s>)
     in
-    [ In(ch), Fr(~y), Fr(~kk), Fr(~rs), !Ltk($S, skeS, skdS) ]
-  --[ Running_S($S, <ch, sh>) ]->
-    [ St_S1($S, ch, sh, prk), !EphX(~y), Out(sh) ]
+    [ In(ch), Fr(~kx), Fr(~kk), Fr(~rs), !Ltk($S, skeS, skdS) ]
+  --[ Running_S($S, th_sh) ]->
+    [ St_S1($S, th_sh, prk), !SsK(~kk), !SsX(~kx),
+      Out(<'sh', ~rs, ct, YS, idS, sig_e, sig_d, fin_s>) ]
 
 // Client: check pin, both signatures and the Finished MAC; answer.
 rule Client_2:
-    let ch     = <'ch', ~rc, kem_pk(~dk), 'g' ^ ~x>
-        idS    = <pkeS, pkdS>
-        sh     = <'sh', rs, ct, YS, idS, sig_e, sig_d, fin_s>
-        th_kex = h(<'transcript', ch, 'sh', rs, ct, YS>)
-        prk    = h(<'extract', th_kex, decaps(ct, ~dk), YS ^ ~x>)
-        th_id  = h(<'transcript', ch, 'sh', rs, ct, YS, idS>)
+    let ch     = <'ch', ~rc, kem_pk(~dk), x_pk(~x)>
+        idS    = <pk_ed(skeS), pk_dsa(skdS)>
+        ct     = encaps(kk, kem_pk(~dk))
+        YS     = x_encaps(kx, x_pk(~x))
+        th_kex = h(<'th', ch, 'sh', rs, ct, YS>)
+        prk    = h(<'extract', th_kex, kk, kx>)
+        th_id  = h(<'th', th_kex, idS>)
         m_s    = <'hybrid-sig', 'server signature', idS, th_id>
-        th_sig = h(<'transcript', ch, 'sh', rs, ct, YS, idS, sig_e, sig_d>)
+        sig_e  = sign_ed(m_s, skeS)
+        sig_d  = sign_dsa(m_s, skdS)
+        th_sig = h(<'th', th_id, sig_e, sig_d>)
+        fin_s  = h(<'hmac', h(<'s finished', prk>), th_sig>)
+        th_sh  = h(<'th', th_sig, fin_s>)
         idC    = <pk_ed(skeC), pk_dsa(skdC)>
-        th_cid = h(<'transcript', ch, sh, 'cf', idC>)
+        th_cid = h(<'th', th_sh, 'cf', idC>)
         m_c    = <'hybrid-sig', 'client signature', idC, th_cid>
         sc_e   = sign_ed(m_c, skeC)
         sc_d   = sign_dsa(m_c, skdC)
-        th_csg = h(<'transcript', ch, sh, 'cf', idC, sc_e, sc_d>)
+        th_csg = h(<'th', th_cid, sc_e, sc_d>)
         fin_c  = h(<'hmac', h(<'c finished', prk>), th_csg>)
-        cf     = <'cf', idC, sc_e, sc_d, fin_c>
-        th_fin = h(<'transcript', ch, sh, cf>)
+        th_fin = h(<'th', th_csg, fin_c>)
         key    = h(<'traffic', prk, th_fin>)
     in
-    [ St_C1($C, $S, ~x, ~dk, ~rc), In(sh),
-      !Ltk($C, skeC, skdC), !Pk($S, pkeS, pkdS) ]       // pinned server identity
-  --[ Eq(verify_ed(sig_e, m_s, pkeS), true),
-      Eq(verify_dsa(sig_d, m_s, pkdS), true),
-      Eq(fin_s, h(<'hmac', h(<'s finished', prk>), th_sig>)),
-      Commit_C($C, $S, <ch, sh>),
-      Running_C($C, $S, <ch, sh, cf>),
-      Accept($C, $S, key),
+    [ St_C1($C, $S, ~x, ~dk, ~rc),
+      In(<'sh', rs, ct, YS, idS, sig_e, sig_d, fin_s>),
+      !Ltk($C, skeC, skdC),
+      !Pk($S, pk_ed(skeS), pk_dsa(skdS)) ]               // pinned server identity
+  --[ Commit_C($C, $S, th_sh),
+      Running_C($C, $S, th_fin),
+      AcceptC($C, $S, key),
       Secret($C, $S, key) ]->
-    [ Out(cf) ]
+    [ Out(<'cf', idC, sc_e, sc_d, fin_c>) ]
 
 // Server: check pin, both signatures and the Finished MAC; accept.
 rule Server_2:
-    let idC    = <pkeC, pkdC>
-        cf     = <'cf', idC, sc_e, sc_d, fin_c>
-        th_cid = h(<'transcript', ch, sh, 'cf', idC>)
+    let idC    = <pk_ed(skeC), pk_dsa(skdC)>
+        th_cid = h(<'th', th_sh, 'cf', idC>)
         m_c    = <'hybrid-sig', 'client signature', idC, th_cid>
-        th_csg = h(<'transcript', ch, sh, 'cf', idC, sc_e, sc_d>)
-        th_fin = h(<'transcript', ch, sh, cf>)
+        sc_e   = sign_ed(m_c, skeC)
+        sc_d   = sign_dsa(m_c, skdC)
+        th_csg = h(<'th', th_cid, sc_e, sc_d>)
+        fin_c  = h(<'hmac', h(<'c finished', prk>), th_csg>)
+        th_fin = h(<'th', th_csg, fin_c>)
         key    = h(<'traffic', prk, th_fin>)
     in
-    [ St_S1($S, ch, sh, prk), In(cf), !Pk($C, pkeC, pkdC) ]   // pinned client identity
-  --[ Eq(verify_ed(sc_e, m_c, pkeC), true),
-      Eq(verify_dsa(sc_d, m_c, pkdC), true),
-      Eq(fin_c, h(<'hmac', h(<'c finished', prk>), th_csg>)),
-      Commit_S($S, $C, <ch, sh, cf>),
-      Accept($S, $C, key),
+    [ St_S1($S, th_sh, prk),
+      In(<'cf', idC, sc_e, sc_d, fin_c>),
+      !Pk($C, pk_ed(skeC), pk_dsa(skdC)) ]               // pinned client identity
+  --[ Commit_S($S, $C, th_fin),
+      AcceptS($S, $C, key),
       Secret($S, $C, key) ]->
     [ ]
 
@@ -161,7 +185,7 @@ rule Server_2:
 lemma executable:
     exists-trace
     "Ex C S k #i #j.
-        Accept(C, S, k) @i & Accept(S, C, k) @j & not (C = S)
+        AcceptC(C, S, k) @i & AcceptS(S, C, k) @j & not (C = S)
       & not (Ex A #r. RevLtk(A) @r)
       & not (Ex #r. BreakEd() @r) & not (Ex #r. BreakDsa() @r)
       & not (Ex #r. BreakX() @r)  & not (Ex #r. BreakK() @r)"

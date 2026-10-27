@@ -7,10 +7,11 @@ ChaCha20-Poly1305 record layer.
 
 > [!WARNING]
 > **Janus is an educational / portfolio project. It is NOT production-ready.**
-> It has not been audited, its protocol has not been formally analysed, and the
-> post-quantum crates it relies on are young. Do not use it to protect real
-> data. See [`docs/DESIGN.md`](docs/DESIGN.md) for what is and is *not*
-> guaranteed.
+> It has not been audited. Its handshake has a symbolic Tamarin model
+> ([`formal/`](formal/)) whose lemmas are machine-verified, but that is not a
+> proof of the implementation. The post-quantum crates it relies on are young.
+> Do not use it to protect real data. See [`docs/DESIGN.md`](docs/DESIGN.md)
+> for what is and is *not* guaranteed.
 
 ## Why "hybrid"?
 
@@ -79,6 +80,9 @@ Scenarios have direct links, e.g. `#x25519`, `#mldsa`, `#rogue-server`.
 - [`docs/DESIGN.md`](docs/DESIGN.md): protocol, key schedule, threat model,
   **what is not guaranteed**, comparison with X-Wing / PQXDH / TLS 1.3 hybrid,
   measurements.
+- [`formal/`](formal/): Tamarin model of the handshake. Secrecy, forward
+  secrecy and injective mutual authentication are verified against an
+  attacker that may break any one primitive of each hybrid pair.
 - [`fuzz/README.md`](fuzz/README.md): fuzz targets and results.
 
 At a glance: a handshake is **13.2 kB** (vs 0.4 kB for the same protocol with
@@ -96,6 +100,7 @@ together; see the design notes for details.
 | [`janus-bench`](crates/janus-bench)          | criterion benchmarks and message-size report                 |
 | [`janus-wasm`](crates/janus-wasm)            | WebAssembly bindings for the browser lab (`web/`)            |
 | [`fuzz`](fuzz)                               | `cargo-fuzz` targets (parsers, server, record layer)         |
+| [`formal`](formal)                           | Tamarin model and proofs of the handshake                    |
 
 No cryptographic primitive is implemented here: everything comes from
 RustCrypto (`ml-kem`, `ml-dsa`, `hkdf`, `hmac`, `sha2`, `chacha20poly1305`)
@@ -146,7 +151,8 @@ cargo test --workspace --release   # release: ML-DSA is slow in debug builds
 cargo clippy --workspace --all-targets -- -D warnings
 ```
 
-Fuzzing: see [`fuzz/README.md`](fuzz/README.md).
+Fuzzing: see [`fuzz/README.md`](fuzz/README.md). Formal model:
+`./formal/run.sh` (needs `tamarin-prover`, ≈ 5 min).
 
 ## License
 

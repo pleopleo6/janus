@@ -1,8 +1,10 @@
 # Janus — design notes
 
 > **Status: educational / portfolio project. Not production-ready, not
-> audited, no formal proof.** This document explains what Janus tries to
-> achieve, how, and — just as importantly — what it does **not** guarantee.
+> audited.** The handshake has a machine-checked *symbolic* Tamarin
+> model ([`formal/`](../formal/)); there is no computational proof. This
+> document explains what Janus tries to achieve, how, and — just as
+> importantly — what it does **not** guarantee.
 
 ## 1. Goals and non-goals
 
@@ -228,8 +230,14 @@ including replay, reordering and truncation detection.
 
 ## 7. What is **not** guaranteed
 
-- **No proof, no audit.** The reasoning above is informal. The protocol has
-  not been modelled in Tamarin/ProVerif nor reviewed by cryptographers.
+- **Symbolic proof only, no audit.** Session-key secrecy, forward secrecy
+  and (injective, KCI-resistant) mutual authentication of the handshake are
+  machine-checked by Tamarin for the symbolic model in [`formal/`](../formal/):
+  a Dolev–Yao attacker that may also reveal long-term keys and break any
+  primitive, the properties holding while one primitive of each pair holds.
+  The model treats hashes, KEMs and signatures as ideal and does not cover
+  the record layer, parsing or the Rust code itself. There is no
+  computational (game-based) proof and no review by cryptographers.
 - **No identity hiding.** Identities are sent in clear: a passive observer
   learns who is talking to whom (TLS 1.3 encrypts certificates; Janus does not).
 - **No deniability.** Both parties sign the transcript, so a transcript is
@@ -335,6 +343,9 @@ round-trip-bound, on a LAN.
 
 ### Testing strategy
 
+- **Formal model** ([`formal/`](../formal/)): Tamarin proves session-key
+  secrecy, forward secrecy, KCI-resistant server authentication and
+  injective client authentication of the handshake in the symbolic model.
 - **KATs**: RFC 7748, RFC 8032 and Wycheproof (ML-KEM-768 keygen / encaps /
   decaps incl. unreduced keys, ML-DSA-65 keygen / signing / verification,
   X25519 low-order points, Ed25519 malleability), injected through the
