@@ -13,7 +13,7 @@
 //! message
 //!
 //! ```text
-//! M' = "janus/v1/hybrid-sig" ‖ len(label):u8 ‖ label ‖ hybrid_public_key ‖ msg
+//! M' = "janus/v1 hybrid-sig" ‖ len(label):u8 ‖ label ‖ hybrid_public_key ‖ msg
 //! ```
 //!
 //! where `hybrid_public_key = ed25519_pk ‖ mldsa_pk` is the **full** hybrid
@@ -60,9 +60,9 @@ pub const IDENTITY_SEED_LEN: usize = 64;
 pub const FINGERPRINT_LEN: usize = 48;
 
 /// Domain-separation prefix of every hybrid-signed message.
-const SIG_PREFIX: &[u8] = b"janus/v1/hybrid-sig";
+const SIG_PREFIX: &[u8] = b"janus/v1 hybrid-sig";
 /// Domain-separation prefix of identity fingerprints.
-const FINGERPRINT_PREFIX: &[u8] = b"janus/v1/fingerprint";
+const FINGERPRINT_PREFIX: &[u8] = b"janus/v1 fingerprint";
 
 /// A long-term hybrid signing identity.
 ///
@@ -225,7 +225,7 @@ impl IdentityPublic {
 
     /// Stable, short identifier of this identity, used for pinning.
     ///
-    /// `SHA-384("janus/v1/fingerprint" ‖ ed25519_pk ‖ mldsa_pk)`. The full hybrid
+    /// `SHA-384("janus/v1 fingerprint" ‖ ed25519_pk ‖ mldsa_pk)`. The full hybrid
     /// key is hashed so that pinning a fingerprint pins *both* halves.
     pub fn fingerprint(&self) -> Fingerprint {
         let mut h = Sha384::new();

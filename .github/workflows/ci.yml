@@ -44,6 +44,14 @@ jobs:
       # Release mode: ML-DSA / proptest are slow in debug builds.
       - run: cargo test --workspace --all-features --release
 
+  # Second, independent implementation of the key schedule (Python stdlib)
+  # checking the committed test vectors.
+  vectors:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 docs/test-vectors/verify.py
+
   msrv:
     runs-on: ubuntu-latest
     steps:

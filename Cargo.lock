@@ -698,12 +698,20 @@ dependencies = [
 name = "janus-channel"
 version = "0.1.0"
 dependencies = [
+ "chacha20",
  "chacha20poly1305",
  "getrandom",
+ "hex",
+ "hkdf",
+ "hmac",
  "janus-core",
+ "ml-kem",
  "proptest",
  "rand_core",
+ "serde_json",
+ "sha2",
  "thiserror",
+ "x25519-dalek",
  "zeroize",
 ]
 

@@ -71,6 +71,11 @@ Scenarios have direct links, e.g. `#x25519`, `#mldsa`, `#rogue-server`.
 
 ## Documentation
 
+- [`docs/PROTOCOL.md`](docs/PROTOCOL.md): byte-exact specification for
+  interoperable implementations, with
+  [test vectors](docs/test-vectors/janus-v1.json) (every random input, all
+  intermediate secrets) and an independent
+  [Python verifier](docs/test-vectors/verify.py) of the key schedule.
 - [`docs/DESIGN.md`](docs/DESIGN.md): protocol, key schedule, threat model,
   **what is not guaranteed**, comparison with X-Wing / PQXDH / TLS 1.3 hybrid,
   measurements.
